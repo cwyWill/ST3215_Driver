@@ -9,26 +9,8 @@
 
 #include "INST.h"
 
-class SCS{
-public:
-	SCS();
-	SCS(bool isBigEndian);
-	SCS(bool isBigEndian, u8 level);
-	int genWrite(u8 ID, u8 MemAddr, u8 *nDat, u8 nLen); // general write
-	int regWrite(u8 ID, u8 MemAddr, u8 *nDat, u8 nLen); // write asynchronously
-	int RegWriteAction(u8 ID = 0xfe); // trigger command for regWrite()
-	void syncWrite(u8 ID[], u8 IDN, u8 MemAddr, u8 *nDat, u8 nLen); // write synchronously
-	int writeByte(u8 ID, u8 MemAddr, u8 bDat); // write 1 byte
-	int writeWord(u8 ID, u8 MemAddr, u16 wDat); // write 2 byte
-	int Read(u8 ID, u8 MemAddr, u8 *nData, u8 nLen); // read command
-	int readByte(u8 ID, u8 MemAddr); // read 1 byte
-	int readWord(u8 ID, u8 MemAddr); // read 2 byte
-	int Ping(u8 ID); // Ping command
-	int syncReadPacketTx(u8 ID[], u8 IDN, u8 MemAddr, u8 nLen); // read synchronously command send
-	int syncReadPacketRx(u8 ID, u8 *nDat); // read synchronously command receive, return the number of byte when succeed, return 0 when failed
-	int syncReadRxPacketToByte(); // decode one byte
-	int syncReadRxPacketToWrod(u8 negBit=0); // decode 2 byte, negBit is the direction, 0 as none.
-
+class SCS {
+// member variables
 public:
 	u8 m_level {1}; // the level of the servo return
 	bool m_isBigEndian { false }; // processor endian structure
@@ -37,6 +19,29 @@ public:
 	u8 syncReadRxPacketLen;
 	u8 *syncReadRxPacket;
 
+// constructor
+public:
+	SCS();
+	SCS(bool isBigEndian);
+	SCS(bool isBigEndian, u8 level);
+
+public:
+	int genWrite(u8 ID, u8 MemAddr, u8 *nDat, u8 nLen); // general write
+	int regWrite(u8 ID, u8 MemAddr, u8 *nDat, u8 nLen); // write asynchronously
+	int RegWriteAction(u8 ID = 0xfe); // trigger command for regWrite()
+	void syncWrite(u8 ID[], u8 IDN, u8 MemAddr, u8 *nDat, u8 nLen); // write synchronously
+	int writeByte(u8 ID, u8 MemAddr, u8 bDat); // write 1 byte
+	int writeWord(u8 ID, u8 MemAddr, u16 wDat); // write 2 byte
+	int read(u8 ID, u8 MemAddr, u8 *nData, u8 nLen); // read command
+	int readByte(u8 ID, u8 MemAddr); // read 1 byte
+	int readWord(u8 ID, u8 MemAddr); // read 2 byte
+	int ping(u8 ID); // Ping command
+	int syncReadPacketTx(u8 ID[], u8 IDN, u8 MemAddr, u8 nLen); // read synchronously command send
+	int syncReadPacketRx(u8 ID, u8 *nDat); // read synchronously command receive, return the number of byte when succeed, return 0 when failed
+	int syncReadRxPacketToByte(); // decode one byte
+	int syncReadRxPacketToWrod(u8 negBit=0); // decode 2 byte, negBit is the direction, 0 as none.
+
+// serial operation
 protected:
 	virtual void writeSCS(unsigned char *nDat, int nLen) = 0;
 	virtual int readSCS(unsigned char *nDat, int nLen) = 0;

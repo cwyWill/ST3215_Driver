@@ -13,56 +13,60 @@ SMS_STS::SMS_STS(std::string port) : SMS_STS { port, BaudRate::r_1M }
 SMS_STS::SMS_STS(std::string port, BaudRate rate) : SCSerial {port, rate}
 { }
 
-int SMS_STS::writePosEx(u8 ID, s16 Position, u16 Speed, u8 ACC)
+int SMS_STS::writePosEx(u8 ID, s16 position, u16 speed, u8 acceleration)
 {
-	if(Position<0){
-		Position = -Position;
-		Position |= (1<<15);
+	if(position<0){
+		position = -position;
+		position |= (1<<15);
 	}
 	u8 bBuf[7];
-	bBuf[0] = ACC;
-	Host2SCS(bBuf+1, bBuf+2, Position);
+	bBuf[0] = acceleration;
+	// put bytes into bBuf
+	Host2SCS(bBuf+1, bBuf+2, position);
 	Host2SCS(bBuf+3, bBuf+4, 0);
-	Host2SCS(bBuf+5, bBuf+6, Speed);
+	Host2SCS(bBuf+5, bBuf+6, speed);
 	
+	// send message
 	return genWrite(ID, SMS_STS_ACC, bBuf, 7);
 }
 
-int SMS_STS::regWritePosEx(u8 ID, s16 Position, u16 Speed, u8 ACC)
+int SMS_STS::regWritePosEx(u8 ID, s16 position, u16 speed, u8 acceleration)
 {
-	if(Position<0){
-		Position = -Position;
-		Position |= (1<<15);
+	if(position<0){
+		position = -position;
+		position |= (1<<15);
 	}
 	u8 bBuf[7];
-	bBuf[0] = ACC;
-	Host2SCS(bBuf+1, bBuf+2, Position);
+	bBuf[0] = acceleration;
+	// put bytes into bBuf
+	Host2SCS(bBuf+1, bBuf+2, position);
 	Host2SCS(bBuf+3, bBuf+4, 0);
-	Host2SCS(bBuf+5, bBuf+6, Speed);
+	Host2SCS(bBuf+5, bBuf+6, speed);
 	
+	// send message
 	return regWrite(ID, SMS_STS_ACC, bBuf, 7);
 }
 
-void SMS_STS::syncWritePosEx(u8 ID[], u8 IDN, s16 Position[], u16 Speed[], u8 ACC[])
+void SMS_STS::syncWritePosEx(u8 ID[], u8 IDN, s16 position[], u16 speed[], u8 acceleration[])
 {
     u8 offbuf[7*IDN];
     for(u8 i = 0; i<IDN; i++){
-		if(Position[i]<0){
-			Position[i] = -Position[i];
-			Position[i] |= (1<<15);
+		if(position[i]<0){
+			position[i] = -position[i];
+			position[i] |= (1<<15);
 		}
 		u16 V;
-		if(Speed){
-			V = Speed[i];
+		if(speed){
+			V = speed[i];
 		}else{
 			V = 0;
 		}
-		if(ACC){
-			offbuf[i*7] = ACC[i];
+		if(acceleration){
+			offbuf[i*7] = acceleration[i];
 		}else{
 			offbuf[i*7] = 0;
 		}
-        Host2SCS(offbuf+i*7+1, offbuf+i*7+2, Position[i]);
+        Host2SCS(offbuf+i*7+1, offbuf+i*7+2, position[i]);
         Host2SCS(offbuf+i*7+3, offbuf+i*7+4, 0);
         Host2SCS(offbuf+i*7+5, offbuf+i*7+6, V);
     }
@@ -74,16 +78,16 @@ int SMS_STS::wheelMode(u8 ID)
 	return writeByte(ID, SMS_STS_MODE, 1);		
 }
 
-int SMS_STS::writeSpeed(u8 ID, s16 Speed, u8 ACC)
+int SMS_STS::writeSpeed(u8 ID, s16 speed, u8 acceleration)
 {
-	if(Speed<0){
-		Speed = -Speed;
-		Speed |= (1<<15);
+	if(speed<0){
+		speed = -speed;
+		speed |= (1<<15);
 	}
 	u8 bBuf[2];
-	bBuf[0] = ACC;
+	bBuf[0] = acceleration;
 	genWrite(ID, SMS_STS_ACC, bBuf, 1);
-	Host2SCS(bBuf+0, bBuf+1, Speed);
+	Host2SCS(bBuf+0, bBuf+1, speed);
 	
 	return genWrite(ID, SMS_STS_GOAL_SPEED_L, bBuf, 2);
 }
@@ -98,24 +102,24 @@ int SMS_STS::disableTorque(u8 ID)
 	return writeByte(ID, SMS_STS_TORQUE_ENABLE, 0x00);
 }
 
-int SMS_STS::unLockEprom(u8 ID)
+int SMS_STS::unlockEEPROM(u8 ID)
 {
 	return writeByte(ID, SMS_STS_LOCK, 0);
 }
 
-int SMS_STS::LockEprom(u8 ID)
+int SMS_STS::lockEEPROM(u8 ID)
 {
 	return writeByte(ID, SMS_STS_LOCK, 1);
 }
 
-int SMS_STS::CalibrationOfs(u8 ID)
+int SMS_STS::offsetCalibration(u8 ID)
 {
 	return writeByte(ID, SMS_STS_TORQUE_ENABLE, 128);
 }
 
-int SMS_STS::FeedBack(int ID)
+int SMS_STS::feedback(int ID)
 {
-	int nLen = Read(ID, SMS_STS_PRESENT_POSITION_L, Mem, sizeof(Mem));
+	int nLen = read(ID, SMS_STS_PRESENT_POSITION_L, Mem, sizeof(Mem));
 	if(nLen!=sizeof(Mem)){
 		m_status = true;
 		return -1;
@@ -124,7 +128,7 @@ int SMS_STS::FeedBack(int ID)
 	return nLen;
 }
 
-int SMS_STS::ReadPos(int ID)
+int SMS_STS::readPosition(int ID)
 {
 	int Pos = -1;
 	if(ID==-1){
@@ -145,7 +149,7 @@ int SMS_STS::ReadPos(int ID)
 	return Pos;
 }
 
-int SMS_STS::ReadSpeed(int ID)
+int SMS_STS::readSpeed(int ID)
 {
 	int Speed = -1;
 	if(ID==-1){
@@ -166,7 +170,7 @@ int SMS_STS::ReadSpeed(int ID)
 	return Speed;
 }
 
-int SMS_STS::ReadLoad(int ID)
+int SMS_STS::readLoad(int ID)
 {
 	int Load = -1;
 	if(ID==-1){
@@ -186,7 +190,7 @@ int SMS_STS::ReadLoad(int ID)
 	return Load;
 }
 
-int SMS_STS::ReadVoltage(int ID)
+int SMS_STS::readVoltage(int ID)
 {	
 	int Voltage = -1;
 	if(ID==-1){
@@ -201,7 +205,7 @@ int SMS_STS::ReadVoltage(int ID)
 	return Voltage;
 }
 
-int SMS_STS::ReadTemper(int ID)
+int SMS_STS::readTemp(int ID)
 {	
 	int Temper = -1;
 	if(ID==-1){
@@ -216,37 +220,37 @@ int SMS_STS::ReadTemper(int ID)
 	return Temper;
 }
 
-int SMS_STS::ReadMove(int ID)
+bool SMS_STS::isMoving(int ID)
 {
-	int Move = -1;
+	int move = -1;
 	if(ID==-1){
-		Move = Mem[SMS_STS_MOVING-SMS_STS_PRESENT_POSITION_L];	
+		move = Mem[SMS_STS_MOVING-SMS_STS_PRESENT_POSITION_L];	
 	}else{
 		m_status = false;
-		Move = readByte(ID, SMS_STS_MOVING);
-		if(Move==-1){
+		move = readByte(ID, SMS_STS_MOVING);
+		if(move==-1){
 			m_status = true;
 		}
 	}
-	return Move;
+	return move == 1;
 }
 
-int SMS_STS::ReadMode(int ID)
+int SMS_STS::readMode(int ID)
 {
-	int Mode = -1;
+	int mode = -1;
 	if(ID==-1){
-		Mode = Mem[SMS_STS_MODE-SMS_STS_PRESENT_POSITION_L];	
+		mode = Mem[SMS_STS_MODE-SMS_STS_PRESENT_POSITION_L];	
 	}else{
 		m_status = false;
-		Mode = readByte(ID, SMS_STS_MODE);
-		if(Mode==-1){
+		mode = readByte(ID, SMS_STS_MODE);
+		if(mode==-1){
 			m_status = true;
 		}
 	}
-	return Mode;
+	return mode;
 }
 
-int SMS_STS::ReadCurrent(int ID)
+int SMS_STS::readCurrent(int ID)
 {
 	int Current = -1;
 	if(ID==-1){

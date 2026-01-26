@@ -13,6 +13,20 @@
 
 class SCSerial : public SCS
 {
+// member variables
+public:
+	boost::asio::io_context m_io;
+	std::string m_port {"/dev/ttyACM0"};
+	BaudRate m_baudrate {BaudRate::r_1M};
+	boost::asio::serial_port m_serial;
+	int m_IOTimeOut_ms {1};  //I/O timeout
+
+// getters and setters
+public:
+	virtual int getErr() const { return m_error; }
+	void setTimeout_ms(int timeout_ms) { m_IOTimeOut_ms = timeout_ms; }
+
+// constructors
 public:
 	SCSerial(std::string port, BaudRate rate);
 	SCSerial(std::string port, BaudRate rate, bool isBigEndian);
@@ -25,16 +39,6 @@ protected:
 	virtual void rFlushSCS();
 	virtual void wFlushSCS();
 
-public:
-	boost::asio::io_context m_io;
-	std::string m_port {"/dev/ttyACM0"};
-	BaudRate m_baudrate {BaudRate::r_1M};
-	boost::asio::serial_port m_serial;
-	int m_IOTimeOut_ms {100};  //I/O timeout
-
-public:
-	virtual int getErr() const { return m_error; }
-	void setTimeout_ms(int timeout_ms) { m_IOTimeOut_ms = timeout_ms; }
 };
 
 #endif

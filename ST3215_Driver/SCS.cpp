@@ -164,7 +164,7 @@ int SCS::writeWord(u8 ID, u8 MemAddr, u16 wDat)
 
 // read command
 // the ID of servo, the memory address in memory table, the return data, the length of data
-int SCS::Read(u8 ID, u8 MemAddr, u8 *nData, u8 nLen)
+int SCS::read(u8 ID, u8 MemAddr, u8 nData[], u8 nLen)
 {
 	rFlushSCS();
 	writeBuf(ID, MemAddr, &nLen, 1, static_cast<u8>(Instruction::read));
@@ -201,7 +201,7 @@ int SCS::Read(u8 ID, u8 MemAddr, u8 *nData, u8 nLen)
 int SCS::readByte(u8 ID, u8 MemAddr)
 {
 	u8 bDat;
-	int Size = Read(ID, MemAddr, &bDat, 1);
+	int Size = read(ID, MemAddr, &bDat, 1);
 	if(Size!=1){
 		return -1;
 	}else{
@@ -215,7 +215,7 @@ int SCS::readWord(u8 ID, u8 MemAddr)
 	u8 nDat[2];
 	int Size;
 	u16 wDat;
-	Size = Read(ID, MemAddr, nDat, 2);
+	Size = read(ID, MemAddr, nDat, 2);
 	if(Size!=2)
 		return -1;
 	wDat = SCS2Host(nDat[0], nDat[1]);
@@ -223,7 +223,7 @@ int SCS::readWord(u8 ID, u8 MemAddr)
 }
 
 // Ping command, return the ID of servo, return -1 when timeout.
-int	SCS::Ping(u8 ID)
+int	SCS::ping(u8 ID)
 {
 	rFlushSCS();
 	writeBuf(ID, 0, NULL, 0, static_cast<u8>(Instruction::ping));
