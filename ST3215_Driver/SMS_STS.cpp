@@ -6,6 +6,8 @@
 
 #include "SMS_STS.h"
 #include <iostream>
+#include <cassert>
+#include <vector>
 
 SMS_STS::SMS_STS(std::string port) : SMS_STS { port, BaudRate::r_1M }
 { }
@@ -47,38 +49,168 @@ int SMS_STS::regWritePosEx(u8 ID, s16 position, u16 speed, u8 acceleration)
 	return regWrite(ID, SMS_STS_ACC, bBuf, 7);
 }
 
+// void SMS_STS::syncWritePosEx(u8 ID[], u8 IDN, s16 position[], u16 speed[], u8 acceleration[])
+// {
+//     u8 offbuf[7*IDN];
+//     for(u8 i = 0; i<IDN; i++){
+// 		if(position[i]<0){
+// 			position[i] = -position[i];
+// 			position[i] |= (1<<15);
+// 		}
+// 		u16 V;
+// 		if(speed){
+// 			V = speed[i];
+// 		}else{
+// 			V = 0;
+// 		}
+// 		if(acceleration){
+// 			offbuf[i*7] = acceleration[i];
+// 		}else{
+// 			offbuf[i*7] = 0;
+// 		}
+//         Host2SCS(offbuf+i*7+1, offbuf+i*7+2, position[i]);
+//         Host2SCS(offbuf+i*7+3, offbuf+i*7+4, 0);
+//         Host2SCS(offbuf+i*7+5, offbuf+i*7+6, V);
+//     }
+//     syncWrite(ID, IDN, SMS_STS_ACC, offbuf, 7);
+// }
 void SMS_STS::syncWritePosEx(u8 ID[], u8 IDN, s16 position[], u16 speed[], u8 acceleration[])
 {
-    u8 offbuf[7*IDN];
-    for(u8 i = 0; i<IDN; i++){
-		if(position[i]<0){
-			position[i] = -position[i];
-			position[i] |= (1<<15);
-		}
-		u16 V;
-		if(speed){
-			V = speed[i];
-		}else{
-			V = 0;
-		}
-		if(acceleration){
-			offbuf[i*7] = acceleration[i];
-		}else{
-			offbuf[i*7] = 0;
-		}
-        Host2SCS(offbuf+i*7+1, offbuf+i*7+2, position[i]);
-        Host2SCS(offbuf+i*7+3, offbuf+i*7+4, 0);
-        Host2SCS(offbuf+i*7+5, offbuf+i*7+6, V);
+    std::vector<u8> offbuf(7 * IDN);
+
+    for (u8 i = 0; i < IDN; i++) {
+
+        if (position[i] < 0) {
+            position[i] = -position[i];
+            position[i] |= (1 << 15);
+        }
+
+        u16 V = speed ? speed[i] : 0;
+
+        offbuf[i*7] = acceleration ? acceleration[i] : 0;
+
+        Host2SCS(offbuf.data() + i*7 + 1, offbuf.data() + i*7 + 2, position[i]);
+        Host2SCS(offbuf.data() + i*7 + 3, offbuf.data() + i*7 + 4, 0);
+        Host2SCS(offbuf.data() + i*7 + 5, offbuf.data() + i*7 + 6, V);
     }
-    syncWrite(ID, IDN, SMS_STS_ACC, offbuf, 7);
+
+    syncWrite(ID, IDN, SMS_STS_ACC, offbuf.data(), 7);
+}
+bool SMS_STS::writeBaudrate(u8 ID, BaudRate rate) {
+	return writeByte(ID, SMS_STS_BAUD_RATE, static_cast<u8>(rate));
 }
 
-int SMS_STS::wheelMode(u8 ID)
+bool SMS_STS::writeReturnDelay(u8 ID, u8 delay_2us) {
+	assert( delay_2us <= 254 && "Delay with 2us step can only range from 0 ~ 254");
+	return writeByte(ID, SMS_STS_RETURN_DELAY, delay_2us);
+}
+
+bool SMS_STS::writeTemperatureLimit(u8 ID, u8 limit) {
+	assert( limit <= 100 && "Temperature limit should be with 100C.");
+	return writeByte(ID, SMS_STS_TEMPERATURE_LIMIT, limit);
+}
+
+bool SMS_STS::writeMinStartForce(u8 ID, u16 force_permil) {
+	assert( force_permil <= 1000 && "Minimum startup force must be 0 ~ 100.0");
+	return writeWord(ID, SMS_STS_MIN_STARTUP_FORCE, force_permil);
+}
+
+bool SMS_STS::writeProtectiveTorque(u8 ID, u8 percent) {
+	return writeByte(ID, SMS_STS_PROTECT_TORQUE, percent);
+}
+
+bool SMS_STS::writeSpeedPgain(u8 ID, u8 Pgain) {
+	return writeByte(ID, SMS_STS_SPEED_P_COEFF, Pgain);
+}
+
+bool SMS_STS::writeSpeedIgain(u8 ID, u8 Igain) {
+	return writeByte(ID, SMS_STS_SPEED_I_COEFF, Igain);
+}
+
+bool SMS_STS::writeRunningtime(u8 ID, u16 runtime_permil) {
+	return writeWord(ID, SMS_STS_GOAL_TIME_L, runtime_permil);
+}
+
+
+bool SMS_STS::writeMode(u8 ID, OperationMode mode) {
+	return writeByte(ID, SMS_STS_MODE, static_cast<u8>(mode));
+}
+
+bool SMS_STS::writeID(u8 ID, u8 newID) {
+	std::cout << "You are overwriting the ID of the motor from " << static_cast<int>(ID) << " to " << static_cast<int>(newID) << ". Press `y` to continue. Other keystroke will abort this process: ";
+	char confirm {};
+	std::cin >> confirm;
+	if (confirm == 'y')
+		return writeByte(ID, SMS_STS_ID, newID);
+	std::cout << "ID reassignment aborted\n";
+	return false;
+}
+
+
+bool SMS_STS::writeMinAngle(u8 ID, u16 minAngle) {
+	assert( minAngle <= 4094 && "Min angle should be <= 4094");
+	return writeWord(ID, SMS_STS_MIN_ANGLE_LIMIT_L, minAngle);
+}
+
+bool SMS_STS::writeMaxAngle(u8 ID, u16 maxAngle) {
+	assert( maxAngle <= 4095 && "Max angle should be <= 4095");
+	return writeWord(ID, SMS_STS_MAX_ANGLE_LIMIT_L, maxAngle);
+}
+
+bool SMS_STS::writeMultiCycle(u8 ID) {
+	u8 msg[4] {0, 0, 0, 0};
+	return genWrite(ID, SMS_STS_MIN_ANGLE_LIMIT_L, msg, 4);
+}
+
+bool SMS_STS::writeTorqueLimit(u8 ID, u16 limit_permil) {
+	assert(limit_permil <= 1000 && "Torque limit should <= 1000.");
+	return writeWord(ID, SMS_STS_MAX_TORQUE, limit_permil);
+}
+
+bool SMS_STS::writePositionPID(u8 ID, u8 Pgain, u8 Igain, u8 Dgain) {
+	u8 msg[3] {Pgain, Dgain, Igain};
+	return genWrite(ID, SMS_STS_POS_P_GAIN, msg, 3);
+}
+
+bool SMS_STS::writePositionPgain(u8 ID, u8 Pgain) {
+	return writeByte(ID, SMS_STS_POS_P_GAIN, Pgain);
+}
+
+bool SMS_STS::writePositionIgain(u8 ID, u8 Igain) {
+	return writeByte(ID, SMS_STS_POS_I_GAIN, Igain);
+}
+
+bool SMS_STS::writePositionDgain(u8 ID, u8 Dgain) {
+	return writeByte(ID, SMS_STS_POS_D_GAIN, Dgain);
+}
+
+bool SMS_STS::writePositionCorrection(u8 ID, u16 correction, bool posDirection) {
+	assert( correction <= 2047 && "Correction value should be 0~2047");
+	if (posDirection)
+		correction |= ( 1 << 11);
+	return writeWord(ID, SMS_STS_OFS_L, posDirection);
+}
+
+bool SMS_STS::writePosition(u8 ID, s16 position) {
+	if(position < 0){
+		position = -position;
+		position |= (1<<15);
+	}
+	return writeWord(ID, SMS_STS_GOAL_POSITION_L, static_cast<u16>(position));
+}
+
+bool SMS_STS::writeAcceleration(u8 ID, u8 acc) {
+	return writeByte(ID, SMS_STS_ACC, acc);
+}
+
+
+
+bool SMS_STS::wheelMode(u8 ID)
 {
 	return writeByte(ID, SMS_STS_MODE, 1);		
 }
 
-int SMS_STS::writeSpeed(u8 ID, s16 speed, u8 acceleration)
+bool SMS_STS::writeSpeed(u8 ID, s16 speed, u8 acceleration)
 {
 	if(speed<0){
 		speed = -speed;
@@ -92,27 +224,27 @@ int SMS_STS::writeSpeed(u8 ID, s16 speed, u8 acceleration)
 	return genWrite(ID, SMS_STS_GOAL_SPEED_L, bBuf, 2);
 }
 
-int SMS_STS::enableTorque(u8 ID)
+bool SMS_STS::enableTorque(u8 ID)
 {
 	return writeByte(ID, SMS_STS_TORQUE_ENABLE, 0x01);
 }
 
-int SMS_STS::disableTorque(u8 ID)
+bool SMS_STS::disableTorque(u8 ID)
 {
 	return writeByte(ID, SMS_STS_TORQUE_ENABLE, 0x00);
 }
 
-int SMS_STS::unlockEEPROM(u8 ID)
+bool SMS_STS::unlockEEPROM(u8 ID)
 {
 	return writeByte(ID, SMS_STS_LOCK, 0);
 }
 
-int SMS_STS::lockEEPROM(u8 ID)
+bool SMS_STS::lockEEPROM(u8 ID)
 {
 	return writeByte(ID, SMS_STS_LOCK, 1);
 }
 
-int SMS_STS::offsetCalibration(u8 ID)
+bool SMS_STS::offsetCalibration(u8 ID)
 {
 	return writeByte(ID, SMS_STS_TORQUE_ENABLE, 128);
 }
@@ -151,73 +283,73 @@ int SMS_STS::readPosition(int ID)
 
 int SMS_STS::readSpeed(int ID)
 {
-	int Speed = -1;
+	int speed = -1;
 	if(ID==-1){
-		Speed = Mem[SMS_STS_PRESENT_SPEED_H-SMS_STS_PRESENT_POSITION_L];
-		Speed <<= 8;
-		Speed |= Mem[SMS_STS_PRESENT_SPEED_L-SMS_STS_PRESENT_POSITION_L];
+		speed = Mem[SMS_STS_PRESENT_SPEED_H-SMS_STS_PRESENT_POSITION_L];
+		speed <<= 8;
+		speed |= Mem[SMS_STS_PRESENT_SPEED_L-SMS_STS_PRESENT_POSITION_L];
 	}else{
 		m_status = false;
-		Speed = readWord(ID, SMS_STS_PRESENT_SPEED_L);
-		if(Speed==-1){
+		speed = readWord(ID, SMS_STS_PRESENT_SPEED_L);
+		if(speed==-1){
 			m_status = true;
 			return -1;
 		}
 	}
-	if(!m_status && (Speed&(1<<15))){
-		Speed = -(Speed&~(1<<15));
+	if(!m_status && (speed&(1<<15))){
+		speed = -(speed&~(1<<15));
 	}	
-	return Speed;
+	return speed;
 }
 
 int SMS_STS::readLoad(int ID)
 {
-	int Load = -1;
+	int load = -1;
 	if(ID==-1){
-		Load = Mem[SMS_STS_PRESENT_LOAD_H-SMS_STS_PRESENT_POSITION_L];
-		Load <<= 8;
-		Load |= Mem[SMS_STS_PRESENT_LOAD_L-SMS_STS_PRESENT_POSITION_L];
+		load = Mem[SMS_STS_PRESENT_LOAD_H-SMS_STS_PRESENT_POSITION_L];
+		load <<= 8;
+		load |= Mem[SMS_STS_PRESENT_LOAD_L-SMS_STS_PRESENT_POSITION_L];
 	}else{
 		m_status = false;
-		Load = readWord(ID, SMS_STS_PRESENT_LOAD_L);
-		if(Load==-1){
+		load = readWord(ID, SMS_STS_PRESENT_LOAD_L);
+		if(load==-1){
 			m_status = true;
 		}
 	}
-	if(!m_status && (Load&(1<<10))){
-		Load = -(Load&~(1<<10));
+	if(!m_status && (load&(1<<10))){
+		load = -(load&~(1<<10));
 	}
-	return Load;
+	return load;
 }
 
 int SMS_STS::readVoltage(int ID)
 {	
-	int Voltage = -1;
+	int voltage = -1;
 	if(ID==-1){
-		Voltage = Mem[SMS_STS_PRESENT_VOLTAGE-SMS_STS_PRESENT_POSITION_L];	
+		voltage = Mem[SMS_STS_PRESENT_VOLTAGE-SMS_STS_PRESENT_POSITION_L];	
 	}else{
 		m_status = false;
-		Voltage = readByte(ID, SMS_STS_PRESENT_VOLTAGE);
-		if(Voltage==-1){
+		voltage = readByte(ID, SMS_STS_PRESENT_VOLTAGE);
+		if(voltage==-1){
 			m_status = true;
 		}
 	}
-	return Voltage;
+	return voltage;
 }
 
 int SMS_STS::readTemp(int ID)
 {	
-	int Temper = -1;
+	int temper = -1;
 	if(ID==-1){
-		Temper = Mem[SMS_STS_PRESENT_TEMPERATURE-SMS_STS_PRESENT_POSITION_L];	
+		temper = Mem[SMS_STS_PRESENT_TEMPERATURE-SMS_STS_PRESENT_POSITION_L];	
 	}else{
 		m_status = false;
-		Temper = readByte(ID, SMS_STS_PRESENT_TEMPERATURE);
-		if(Temper==-1){
+		temper = readByte(ID, SMS_STS_PRESENT_TEMPERATURE);
+		if(temper==-1){
 			m_status = true;
 		}
 	}
-	return Temper;
+	return temper;
 }
 
 bool SMS_STS::isMoving(int ID)

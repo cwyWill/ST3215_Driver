@@ -33,12 +33,15 @@ public:
 	SCSerial(std::string port, BaudRate rate, bool isBigEndian, u8 level);
 
 protected:
-	virtual void writeSCS(unsigned char *nDat, int nLen);	// output nLen byte
+	// write to serial
+	virtual void writeSCS(unsigned char *nDat, int nLen);
+	virtual void writeSCS(unsigned char bDat);
+	// read from serial
 	virtual int readSCS(unsigned char *nDat, int nLen); 	// input nLen byte
-	virtual void writeSCS(unsigned char bDat); 				// output 1 byte
+
+	// flushing the read/write buffer
 	virtual void rFlushSCS();
 	virtual void wFlushSCS();
-
 };
 
 #endif

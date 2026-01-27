@@ -26,20 +26,20 @@ public:
 	SCS(bool isBigEndian, u8 level);
 
 public:
-	int genWrite(u8 ID, u8 MemAddr, u8 *nDat, u8 nLen); // general write
-	int regWrite(u8 ID, u8 MemAddr, u8 *nDat, u8 nLen); // write asynchronously
-	int RegWriteAction(u8 ID = 0xfe); // trigger command for regWrite()
-	void syncWrite(u8 ID[], u8 IDN, u8 MemAddr, u8 *nDat, u8 nLen); // write synchronously
-	int writeByte(u8 ID, u8 MemAddr, u8 bDat); // write 1 byte
-	int writeWord(u8 ID, u8 MemAddr, u16 wDat); // write 2 byte
-	int read(u8 ID, u8 MemAddr, u8 *nData, u8 nLen); // read command
-	int readByte(u8 ID, u8 MemAddr); // read 1 byte
-	int readWord(u8 ID, u8 MemAddr); // read 2 byte
+	bool genWrite(u8 ID, u8 memAddr, u8 *nDat, u8 nLen); // general write
+	bool regWrite(u8 ID, u8 memAddr, u8 *nDat, u8 nLen); // write asynchronously
+	bool RegWriteAction(u8 ID = 0xfe); // trigger command for regWrite()
+	void syncWrite(u8 ID[], u8 IDN, u8 memAddr, u8 *nDat, u8 nLen); // write synchronously
+	bool writeByte(u8 ID, u8 memAddr, u8 bDat); // write 1 byte
+	bool writeWord(u8 ID, u8 memAddr, u16 wDat); // write 2 byte
+	int read(u8 ID, u8 memAddr, u8 *nData, u8 nLen); // read command
+	int readByte(u8 ID, u8 memAddr); // read 1 byte
+	int readWord(u8 ID, u8 memAddr); // read 2 byte
 	int ping(u8 ID); // Ping command
-	int syncReadPacketTx(u8 ID[], u8 IDN, u8 MemAddr, u8 nLen); // read synchronously command send
+	int syncReadPacketTx(u8 ID[], u8 IDN, u8 memAddr, u8 nLen); // read synchronously command send
 	int syncReadPacketRx(u8 ID, u8 *nDat); // read synchronously command receive, return the number of byte when succeed, return 0 when failed
 	int syncReadRxPacketToByte(); // decode one byte
-	int syncReadRxPacketToWrod(u8 negBit=0); // decode 2 byte, negBit is the direction, 0 as none.
+	int syncReadRxPacketToWord(u8 negBit=0); // decode 2 byte, negBit is the direction, 0 as none.
 
 // serial operation
 protected:
@@ -49,10 +49,10 @@ protected:
 	virtual void rFlushSCS() = 0;
 	virtual void wFlushSCS() = 0;
 protected:
-	void writeBuf(u8 ID, u8 MemAddr, u8 *nDat, u8 nLen, u8 Fun);
-	void Host2SCS(u8 *DataL, u8* DataH, u16 Data); // one 16-digit number split into two 8-digit numbers
-	u16	SCS2Host(u8 DataL, u8 DataH); // combination of two 8-digit numbers into one 16-digit number
-	int	ack(u8 ID); // return response
-	int checkHead(); // Frame header detection
+	void writeBuf(u8 ID, u8 memAddr, u8 *nDat, u8 nLen, u8 instr);
+	void Host2SCS(u8 *dataL, u8* dataH, u16 data); // one 16-digit number split into two 8-digit numbers
+	u16	SCS2Host(u8 dataL, u8 dataH); // combination of two 8-digit numbers into one 16-digit number
+	bool ack(u8 ID); // return response
+	bool checkHead(); // Frame header detection
 };
 #endif

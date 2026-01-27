@@ -18,7 +18,7 @@ SCSerial::SCSerial(std::string port, BaudRate rate, bool isBigEndian) :
 { }
 
 SCSerial::SCSerial(std::string port, BaudRate rate, bool isBigEndian, u8 level) :
-	SCS{ isBigEndian, level }, m_io {}, m_serial(m_io, port), m_port { port }, m_baudrate { rate }
+	SCS{ isBigEndian, level }, m_io {}, m_port { port }, m_baudrate { rate }, m_serial(m_io, port)
 {
     m_serial.set_option(boost::asio::serial_port_base::baud_rate(getIntBaudrate(m_baudrate)));
     m_serial.set_option(boost::asio::serial_port_base::character_size(8));
@@ -36,7 +36,7 @@ int SCSerial::readSCS(unsigned char *nDat, int nLen)
 		// read from serial
 		boost::asio::read(m_serial, boost::asio::buffer(&comData, 1));
 
-		if ( comData != -1 ){
+		if ( comData != '\0' ){
 			if( nDat ){
 				nDat[size] = comData;
 			}
@@ -69,6 +69,7 @@ void SCSerial::writeSCS(unsigned char bDat)
     boost::asio::write(m_serial, boost::asio::buffer(&bDat, 1));
 }
 
+// TODO read flush buffer timeout handling
 void SCSerial::rFlushSCS()
 {
 	// while ( true ){
@@ -78,6 +79,7 @@ void SCSerial::rFlushSCS()
 	// }
 }
 
+// TODO write flush buffer
 void SCSerial::wFlushSCS()
 {
 }
