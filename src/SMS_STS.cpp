@@ -9,6 +9,13 @@
 #include <cassert>
 #include <vector>
 
+std::ostream& operator<< (std::ostream& out, const MonitorParams& monitor) {
+	out << " load: " << monitor.load << " %, voltage: "
+					<< monitor.voltage << " V, temperature: "
+					<< monitor.temperature << " C.\n";
+	return out;
+}
+
 SMS_STS::SMS_STS(std::string port) : SMS_STS { port, BaudRate::r_1M }
 { }
 
@@ -252,7 +259,7 @@ bool SMS_STS::offsetCalibration(u8 ID)
 int SMS_STS::feedback(int ID)
 {
 	int nLen = read(ID, SMS_STS_PRESENT_POSITION_L, Mem, sizeof(Mem));
-	if(nLen!=sizeof(Mem)){
+	if ( nLen != sizeof(Mem) ) {
 		m_status = true;
 		return -1;
 	}
@@ -262,105 +269,130 @@ int SMS_STS::feedback(int ID)
 
 int SMS_STS::readPosition(int ID)
 {
-	int Pos = -1;
-	if(ID==-1){
-		Pos = Mem[SMS_STS_PRESENT_POSITION_H-SMS_STS_PRESENT_POSITION_L];
-		Pos <<= 8;
-		Pos |= Mem[SMS_STS_PRESENT_POSITION_L-SMS_STS_PRESENT_POSITION_L];
-	}else{
+	int pos = -1;
+	if ( ID == -1 ) {
+		pos = Mem[SMS_STS_PRESENT_POSITION_H-SMS_STS_PRESENT_POSITION_L];
+		pos <<= 8;
+		pos |= Mem[SMS_STS_PRESENT_POSITION_L-SMS_STS_PRESENT_POSITION_L];
+	}
+	else {
 		m_status = false;
-		Pos = readWord(ID, SMS_STS_PRESENT_POSITION_L);
-		if(Pos==-1){
+		pos = readWord(ID, SMS_STS_PRESENT_POSITION_L);
+		if ( pos == -1 ) {
 			m_status = true;
 		}
 	}
-	if(!m_status && (Pos&(1<<15))){
-		Pos = -(Pos&~(1<<15));
+	if ( !m_status && (pos&(1<<15)) ) {
+		pos = -(pos&~(1<<15));
 	}
 	
-	return Pos;
+	return pos;
 }
 
-int SMS_STS::readSpeed(int ID)
-{
+// readSpeed. unit: step/s
+int SMS_STS::readSpeed(int ID) {
 	int speed = -1;
-	if(ID==-1){
+	if ( ID == -1 ) {
 		speed = Mem[SMS_STS_PRESENT_SPEED_H-SMS_STS_PRESENT_POSITION_L];
 		speed <<= 8;
 		speed |= Mem[SMS_STS_PRESENT_SPEED_L-SMS_STS_PRESENT_POSITION_L];
-	}else{
+	}
+	else {
 		m_status = false;
 		speed = readWord(ID, SMS_STS_PRESENT_SPEED_L);
-		if(speed==-1){
+		if ( speed == -1 ) {
 			m_status = true;
 			return -1;
 		}
 	}
-	if(!m_status && (speed&(1<<15))){
+	if (!m_status && (speed&(1<<15)) ) {
 		speed = -(speed&~(1<<15));
 	}	
 	return speed;
 }
 
-int SMS_STS::readLoad(int ID)
+double SMS_STS::readLoad(int ID)
 {
 	int load = -1;
-	if(ID==-1){
+	if ( ID == -1 ) {
 		load = Mem[SMS_STS_PRESENT_LOAD_H-SMS_STS_PRESENT_POSITION_L];
 		load <<= 8;
 		load |= Mem[SMS_STS_PRESENT_LOAD_L-SMS_STS_PRESENT_POSITION_L];
-	}else{
+	}
+	else {
 		m_status = false;
 		load = readWord(ID, SMS_STS_PRESENT_LOAD_L);
-		if(load==-1){
+		if( load == -1 ){
 			m_status = true;
 		}
 	}
-	if(!m_status && (load&(1<<10))){
+	if(!m_status && (load&(1<<10)) ) {
 		load = -(load&~(1<<10));
 	}
-	return load;
+	constexpr double loadUnit { 0.1 };
+	return load * loadUnit;
 }
 
-int SMS_STS::readVoltage(int ID)
+double SMS_STS::readVoltage(int ID)
 {	
 	int voltage = -1;
-	if(ID==-1){
+	if ( ID == -1 ) {
 		voltage = Mem[SMS_STS_PRESENT_VOLTAGE-SMS_STS_PRESENT_POSITION_L];	
-	}else{
+	}
+	else {
 		m_status = false;
 		voltage = readByte(ID, SMS_STS_PRESENT_VOLTAGE);
-		if(voltage==-1){
+		if ( voltage == -1 ) {
 			m_status = true;
 		}
 	}
-	return voltage;
+	constexpr double voltageUnit { 0.1 };
+	return voltage * voltageUnit;
 }
 
 int SMS_STS::readTemp(int ID)
 {	
 	int temper = -1;
-	if(ID==-1){
+	if ( ID == -1 ) {
 		temper = Mem[SMS_STS_PRESENT_TEMPERATURE-SMS_STS_PRESENT_POSITION_L];	
-	}else{
+	}
+	else {
 		m_status = false;
 		temper = readByte(ID, SMS_STS_PRESENT_TEMPERATURE);
-		if(temper==-1){
+		if ( temper == -1 ) {
 			m_status = true;
 		}
 	}
 	return temper;
 }
 
+MonitorParams SMS_STS::readMonitor(int ID) {
+	constexpr u8 memAddr { SMS_STS_PRESENT_LOAD_L };
+	constexpr u8 nLen {4};
+	u8 nData[4] {};
+	read(ID, memAddr, nData, nLen);
+	// nData now carries load (2 bytes), voltage, temperature
+	double load { static_cast<int>(nData[0] | (nData[1] << 8) ) * 0.1 };
+	double voltage { static_cast<int>(nData[2]) * 0.1 };
+	int temperature { static_cast<int>(nData[3]) };
+	return { load, voltage, temperature };
+}
+
+
+void SMS_STS::printInfo(int ID) {
+	std::cout << "Motor " << ID << readMonitor(ID);
+}
+
 bool SMS_STS::isMoving(int ID)
 {
 	int move = -1;
-	if(ID==-1){
+	if ( ID == -1 ) {
 		move = Mem[SMS_STS_MOVING-SMS_STS_PRESENT_POSITION_L];	
-	}else{
+	}
+	else {
 		m_status = false;
 		move = readByte(ID, SMS_STS_MOVING);
-		if(move==-1){
+		if ( move == -1 ) {
 			m_status = true;
 		}
 	}
@@ -370,36 +402,39 @@ bool SMS_STS::isMoving(int ID)
 int SMS_STS::readMode(int ID)
 {
 	int mode = -1;
-	if(ID==-1){
+	if ( ID == -1 ) {
 		mode = Mem[SMS_STS_MODE-SMS_STS_PRESENT_POSITION_L];	
-	}else{
+	}
+	else {
 		m_status = false;
 		mode = readByte(ID, SMS_STS_MODE);
-		if(mode==-1){
+		if ( mode == -1 ) {
 			m_status = true;
 		}
 	}
 	return mode;
 }
 
-int SMS_STS::readCurrent(int ID)
+double SMS_STS::readCurrent(int ID)
 {
-	int Current = -1;
-	if(ID==-1){
-		Current = Mem[SMS_STS_PRESENT_CURRENT_H-SMS_STS_PRESENT_POSITION_L];
-		Current <<= 8;
-		Current |= Mem[SMS_STS_PRESENT_CURRENT_L-SMS_STS_PRESENT_POSITION_L];
-	}else{
+	int current = -1;
+	if (ID == -1) {
+		current = Mem[SMS_STS_PRESENT_CURRENT_H-SMS_STS_PRESENT_POSITION_L];
+		current <<= 8;
+		current |= Mem[SMS_STS_PRESENT_CURRENT_L-SMS_STS_PRESENT_POSITION_L];
+	}
+	else {
 		m_status = false;
-		Current = readWord(ID, SMS_STS_PRESENT_CURRENT_L);
-		if(Current==-1){
+		current = readWord(ID, SMS_STS_PRESENT_CURRENT_L);
+		if ( current == -1 ) {
 			m_status = true;
 			return -1;
 		}
 	}
-	if(!m_status && (Current&(1<<15))){
-		Current = -(Current&~(1<<15));
+	if ( !m_status && (current&(1<<15)) ) {
+		current = -(current&~(1<<15));
 	}	
-	return Current;
+	constexpr double currentUnit { 6.5 };
+	return current * currentUnit;
 }
 

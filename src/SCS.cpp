@@ -214,37 +214,37 @@ int SCS::readByte(u8 ID, u8 memAddr)
 int SCS::readWord(u8 ID, u8 memAddr)
 {	
 	u8 nDat[2];
-	int Size;
+	int size;
 	u16 wDat;
-	Size = read(ID, memAddr, nDat, 2);
-	if(Size!=2)
+	size = read(ID, memAddr, nDat, 2);
+	if (size != 2)
 		return -1;
 	wDat = SCS2Host(nDat[0], nDat[1]);
 	return wDat;
 }
 
 // Ping command, return the ID of servo, return -1 when timeout.
-int	SCS::ping(u8 ID)
+bool SCS::ping(u8 ID)
 {
 	rFlushSCS();
 	writeBuf(ID, 0, NULL, 0, static_cast<u8>(Instruction::ping));
 	wFlushSCS();
 	m_error = 0;
-	if(!checkHead()){
+	if ( !checkHead() ){
 		return -1;
 	}
 	u8 bBuf[4];
-	if(readSCS(bBuf, 4)!=4){
+	if ( readSCS(bBuf, 4) != 4 ) {
 		return -1;
 	}
-	if(bBuf[0]!=ID && ID!=0xfe){
+	if ( bBuf[0] != ID && ID != 0xfe ) {
 		return -1;
 	}
-	if(bBuf[1]!=2){
+	if (bBuf[1]!=2){
 		return -1;
 	}
 	u8 calSum = ~(bBuf[0]+bBuf[1]+bBuf[2]);
-	if(calSum!=bBuf[3]){
+	if ( calSum != bBuf[3] ) {
 		return -1;			
 	}
 	m_error = bBuf[2];

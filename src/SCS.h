@@ -35,7 +35,7 @@ public:
 	int read(u8 ID, u8 memAddr, u8 *nData, u8 nLen); // read command
 	int readByte(u8 ID, u8 memAddr); // read 1 byte
 	int readWord(u8 ID, u8 memAddr); // read 2 byte
-	int ping(u8 ID); // Ping command
+	bool ping(u8 ID); // Ping command
 	int syncReadPacketTx(u8 ID[], u8 IDN, u8 memAddr, u8 nLen); // read synchronously command send
 	int syncReadPacketRx(u8 ID, u8 *nDat); // read synchronously command receive, return the number of byte when succeed, return 0 when failed
 	int syncReadRxPacketToByte(); // decode one byte

@@ -8,13 +8,15 @@
 #define _INST_H
 
 #include <cstddef>
+#include <cstdint>
 
-using s8 = char;
-using u8 = unsigned char;
-using u16 = unsigned short;
-using s16 = short;
-using u32 = unsigned long;
-using s32 = long;
+using s8 = int8_t;
+using u8 = uint8_t;
+using u16 = uint16_t;
+using s16 = int16_t;
+using u32 = uint32_t;
+using s32 = int32_t;
+
 
 enum class Instruction : u8{
     ping = 0x01,

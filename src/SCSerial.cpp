@@ -32,23 +32,13 @@ int SCSerial::readSCS(unsigned char *nDat, int nLen)
 	int size = 0;
 	u8 comData;
 	Timer timer;
-	while ( true ){
-		// read from serial
-		boost::asio::read(m_serial, boost::asio::buffer(&comData, 1));
 
-		if ( comData != '\0' ){
-			if( nDat ){
-				nDat[size] = comData;
-			}
-			size++;
-			timer.reset();
+	while ( size < nLen ) {
+		boost::asio::read(m_serial, boost::asio::buffer(&comData, 1));
+		if( nDat ){
+			nDat[size] = comData;
 		}
-		if (size >= nLen){
-			break;
-		}
-		// timeout
-		if (timer.elapsed() * 1000 > m_IOTimeOut_ms)
-			break;
+		size++;
 	}
 	return size;
 }

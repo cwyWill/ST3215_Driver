@@ -9,6 +9,7 @@
 
 #include <string>
 #include <utility>
+#include <iostream>
 
 using u8 = unsigned char;
 
@@ -77,6 +78,15 @@ enum class OperationMode {
 	PWM,
 };
 
+struct MonitorParams {
+	double load {};
+	double voltage {};
+	int temperature {};
+};
+
+
+
+
 #include "SCSerial.h"
 
 class SMS_STS : public SCSerial
@@ -143,12 +153,14 @@ public:
 	virtual int feedback(int ID);//servo information feedback
 	virtual int readPosition(int ID);//read position
 	virtual int readSpeed(int ID);//read speed
-	virtual int readLoad(int ID);//read motor load(0~1000, 1000 = 100% max load)
-	virtual int readVoltage(int ID);//read voltage
+	virtual double readLoad(int ID);//read motor load(0~1000, 1000 = 100% max load)
+	virtual double readVoltage(int ID);//read voltage
 	virtual int readTemp(int ID);//read temperature
-	virtual int readCurrent(int ID);//read current
+	virtual double readCurrent(int ID);//read current
 	virtual int readMode(int ID);//read working mode
 	virtual bool isMoving(int ID);//read move mode
+	virtual void printInfo(int ID);
+	virtual MonitorParams readMonitor(int ID);
 
 	// virtual std::pair<s16, u16> readPosSpeed(int ID);
 
