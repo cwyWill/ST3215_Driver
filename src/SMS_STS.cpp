@@ -156,46 +156,92 @@ bool SMS_STS::writeID(u8 ID, u8 newID) {
 
 bool SMS_STS::writeMinAngle(u8 ID, u16 minAngle) {
 	assert( minAngle <= 4094 && "Min angle should be <= 4094");
-	return writeWord(ID, SMS_STS_MIN_ANGLE_LIMIT_L, minAngle);
+	m_ackg = writeWord(ID, SMS_STS_MIN_ANGLE_LIMIT_L, minAngle);
+	if ( !m_ackg) {
+		std::cerr << "Write minimum angle command no respond.\n";
+	}
+	return m_ackg;
 }
 
 bool SMS_STS::writeMaxAngle(u8 ID, u16 maxAngle) {
 	assert( maxAngle <= 4095 && "Max angle should be <= 4095");
-	return writeWord(ID, SMS_STS_MAX_ANGLE_LIMIT_L, maxAngle);
+	m_ackg = writeWord(ID, SMS_STS_MAX_ANGLE_LIMIT_L, maxAngle);
+	if ( !m_ackg) {
+		std::cerr << "Write maximum angle command no respond.\n";
+	}
+	return m_ackg;
 }
+
 
 bool SMS_STS::writeMultiCycle(u8 ID) {
 	u8 msg[4] {0, 0, 0, 0};
-	return genWrite(ID, SMS_STS_MIN_ANGLE_LIMIT_L, msg, 4);
+	m_ackg = genWrite(ID, SMS_STS_MIN_ANGLE_LIMIT_L, msg, 4);
+	if ( !m_ackg) {
+		std::cerr << "Write multicycle command no respond.\n";
+	}
+	return m_ackg;
+}
+
+bool SMS_STS::resetMinMaxAngle(u8 ID) {
+	u8 msg[4] {0, 0, 0xFF, 0x0F};
+	m_ackg = genWrite(ID, SMS_STS_MIN_ANGLE_LIMIT_L, msg, 4);
+	if ( !m_ackg) {
+		std::cerr << "Reset min/max command no respond.\n";
+	}
+	return m_ackg;
 }
 
 bool SMS_STS::writeTorqueLimit(u8 ID, u16 limit_permil) {
 	assert(limit_permil <= 1000 && "Torque limit should <= 1000.");
 	return writeWord(ID, SMS_STS_MAX_TORQUE, limit_permil);
+	if ( !m_ackg) {
+		std::cerr << "Write torque limit command no respond.\n";
+	}
+	return m_ackg;
 }
 
 bool SMS_STS::writePositionPID(u8 ID, u8 Pgain, u8 Igain, u8 Dgain) {
 	u8 msg[3] {Pgain, Dgain, Igain};
-	return genWrite(ID, SMS_STS_POS_P_GAIN, msg, 3);
+	m_ackg = genWrite(ID, SMS_STS_POS_P_GAIN, msg, 3);
+	if ( !m_ackg) {
+		std::cerr << "Write position PID command no respond.\n";
+	}
+	return m_ackg;
 }
 
 bool SMS_STS::writePositionPgain(u8 ID, u8 Pgain) {
-	return writeByte(ID, SMS_STS_POS_P_GAIN, Pgain);
+	m_ackg = writeByte(ID, SMS_STS_POS_P_GAIN, Pgain);
+	if ( !m_ackg) {
+		std::cerr << "Write position P gain command no respond.\n";
+	}
+	return m_ackg;
 }
 
 bool SMS_STS::writePositionIgain(u8 ID, u8 Igain) {
-	return writeByte(ID, SMS_STS_POS_I_GAIN, Igain);
+	m_ackg = writeByte(ID, SMS_STS_POS_I_GAIN, Igain);
+	if ( !m_ackg) {
+		std::cerr << "Write position I gain command no respond.\n";
+	}
+	return m_ackg;
 }
 
 bool SMS_STS::writePositionDgain(u8 ID, u8 Dgain) {
-	return writeByte(ID, SMS_STS_POS_D_GAIN, Dgain);
+	m_ackg = writeByte(ID, SMS_STS_POS_D_GAIN, Dgain);
+	if ( !m_ackg) {
+		std::cerr << "Write position D gain command no respond.\n";
+	}
+	return m_ackg;
 }
 
 bool SMS_STS::writePositionCorrection(u8 ID, u16 correction, bool posDirection) {
 	assert( correction <= 2047 && "Correction value should be 0~2047");
 	if (posDirection)
 		correction |= ( 1 << 11);
-	return writeWord(ID, SMS_STS_OFS_L, posDirection);
+	m_ackg = writeWord(ID, SMS_STS_OFS_L, posDirection);
+	if ( !m_ackg) {
+		std::cerr << "Write position correction command no respond.\n";
+	}
+	return m_ackg;
 }
 
 bool SMS_STS::writePosition(u8 ID, s16 position) {
@@ -203,18 +249,30 @@ bool SMS_STS::writePosition(u8 ID, s16 position) {
 		position = -position;
 		position |= (1<<15);
 	}
-	return writeWord(ID, SMS_STS_GOAL_POSITION_L, static_cast<u16>(position));
+	m_ackg = writeWord(ID, SMS_STS_GOAL_POSITION_L, static_cast<u16>(position));
+	if ( !m_ackg) {
+		std::cerr << "Write position command no respond.\n";
+	}
+	return m_ackg;
 }
 
 bool SMS_STS::writeAcceleration(u8 ID, u8 acc) {
-	return writeByte(ID, SMS_STS_ACC, acc);
+	m_ackg = writeByte(ID, SMS_STS_ACC, acc);
+	if ( !m_ackg) {
+		std::cerr << "Write acceleration command no respond.\n";
+	}
+	return m_ackg;
 }
 
 
 
 bool SMS_STS::wheelMode(u8 ID)
 {
-	return writeByte(ID, SMS_STS_MODE, 1);		
+	m_ackg = writeByte(ID, SMS_STS_MODE, 1);		
+	if ( !m_ackg) {
+		std::cerr << "Write wheel mode command no respond.\n";
+	}
+	return m_ackg;
 }
 
 bool SMS_STS::writeSpeed(u8 ID, s16 speed, u8 acceleration)
@@ -228,42 +286,67 @@ bool SMS_STS::writeSpeed(u8 ID, s16 speed, u8 acceleration)
 	genWrite(ID, SMS_STS_ACC, bBuf, 1);
 	Host2SCS(bBuf+0, bBuf+1, speed);
 	
-	return genWrite(ID, SMS_STS_GOAL_SPEED_L, bBuf, 2);
+	m_ackg = genWrite(ID, SMS_STS_GOAL_SPEED_L, bBuf, 2);
+	if ( !m_ackg) {
+		std::cerr << "Write speed command no respond.\n";
+	}
+	return m_ackg;
 }
 
 bool SMS_STS::enableTorque(u8 ID)
 {
-	return writeByte(ID, SMS_STS_TORQUE_ENABLE, 0x01);
+	m_ackg = writeByte(ID, SMS_STS_TORQUE_ENABLE, 0x01);
+	if ( !m_ackg) {
+		std::cerr << "Enable torque command no respond.\n";
+	}
+	return m_ackg;
 }
 
 bool SMS_STS::disableTorque(u8 ID)
 {
-	return writeByte(ID, SMS_STS_TORQUE_ENABLE, 0x00);
+	m_ackg = writeByte(ID, SMS_STS_TORQUE_ENABLE, 0x00);
+	if ( !m_ackg) {
+		std::cerr << "Disable torque command no respond.\n";
+	}
+	return m_ackg;
 }
 
 bool SMS_STS::unlockEEPROM(u8 ID)
 {
-	return writeByte(ID, SMS_STS_LOCK, 0);
+	m_ackg = writeByte(ID, SMS_STS_LOCK, 0);
+	if ( !m_ackg) {
+		std::cerr << "Unlock EEPROM command no respond.\n";
+	}
+	return m_ackg;
 }
 
 bool SMS_STS::lockEEPROM(u8 ID)
 {
-	return writeByte(ID, SMS_STS_LOCK, 1);
+	m_ackg = writeByte(ID, SMS_STS_LOCK, 1);
+	if ( !m_ackg) {
+		std::cerr << "Lock EEPROM command no respond.\n";
+	}
+	return m_ackg;
 }
 
 bool SMS_STS::offsetCalibration(u8 ID)
 {
-	return writeByte(ID, SMS_STS_TORQUE_ENABLE, 128);
+	m_ackg = writeByte(ID, SMS_STS_TORQUE_ENABLE, 128);
+	if ( !m_ackg) {
+		std::cerr << "Offset calibration command no respond.\n";
+	}
+	return m_ackg;
 }
 
 int SMS_STS::feedback(int ID)
 {
 	int nLen = read(ID, SMS_STS_PRESENT_POSITION_L, Mem, sizeof(Mem));
 	if ( nLen != sizeof(Mem) ) {
-		m_status = true;
+		m_ackg = false;
+		std::cerr << "No feedback.\n";
 		return -1;
 	}
-	m_status = false;
+	m_ackg = true;
 	return nLen;
 }
 
@@ -276,13 +359,14 @@ int SMS_STS::readPosition(int ID)
 		pos |= Mem[SMS_STS_PRESENT_POSITION_L-SMS_STS_PRESENT_POSITION_L];
 	}
 	else {
-		m_status = false;
+		m_ackg = true;
 		pos = readWord(ID, SMS_STS_PRESENT_POSITION_L);
 		if ( pos == -1 ) {
-			m_status = true;
+			m_ackg = false;
+			std::cerr << "Failed to read postion on ID " << ID << '\n';
 		}
 	}
-	if ( !m_status && (pos&(1<<15)) ) {
+	if ( !m_ackg && (pos&(1<<15)) ) {
 		pos = -(pos&~(1<<15));
 	}
 	
@@ -298,14 +382,15 @@ int SMS_STS::readSpeed(int ID) {
 		speed |= Mem[SMS_STS_PRESENT_SPEED_L-SMS_STS_PRESENT_POSITION_L];
 	}
 	else {
-		m_status = false;
+		m_ackg = true;
 		speed = readWord(ID, SMS_STS_PRESENT_SPEED_L);
 		if ( speed == -1 ) {
-			m_status = true;
+			m_ackg = false;
+			std::cerr << "Failed to read speed on ID " << ID << '\n';
 			return -1;
 		}
 	}
-	if (!m_status && (speed&(1<<15)) ) {
+	if (!m_ackg && (speed&(1<<15)) ) {
 		speed = -(speed&~(1<<15));
 	}	
 	return speed;
@@ -320,13 +405,14 @@ double SMS_STS::readLoad(int ID)
 		load |= Mem[SMS_STS_PRESENT_LOAD_L-SMS_STS_PRESENT_POSITION_L];
 	}
 	else {
-		m_status = false;
+		m_ackg = true;
 		load = readWord(ID, SMS_STS_PRESENT_LOAD_L);
 		if( load == -1 ){
-			m_status = true;
+			m_ackg = false;
+			std::cerr << "Failed to read load on ID " << ID << '\n';
 		}
 	}
-	if(!m_status && (load&(1<<10)) ) {
+	if(!m_ackg && (load&(1<<10)) ) {
 		load = -(load&~(1<<10));
 	}
 	constexpr double loadUnit { 0.1 };
@@ -340,10 +426,11 @@ double SMS_STS::readVoltage(int ID)
 		voltage = Mem[SMS_STS_PRESENT_VOLTAGE-SMS_STS_PRESENT_POSITION_L];	
 	}
 	else {
-		m_status = false;
+		m_ackg = true;
 		voltage = readByte(ID, SMS_STS_PRESENT_VOLTAGE);
 		if ( voltage == -1 ) {
-			m_status = true;
+			m_ackg = false;
+			std::cerr << "Failed to read voltage on ID " << ID << '\n';
 		}
 	}
 	constexpr double voltageUnit { 0.1 };
@@ -357,10 +444,11 @@ int SMS_STS::readTemp(int ID)
 		temper = Mem[SMS_STS_PRESENT_TEMPERATURE-SMS_STS_PRESENT_POSITION_L];	
 	}
 	else {
-		m_status = false;
+		m_ackg = true;
 		temper = readByte(ID, SMS_STS_PRESENT_TEMPERATURE);
 		if ( temper == -1 ) {
-			m_status = true;
+			m_ackg = false;
+			std::cerr << "Failed to read temperature on ID " << ID << '\n';
 		}
 	}
 	return temper;
@@ -369,8 +457,15 @@ int SMS_STS::readTemp(int ID)
 MonitorParams SMS_STS::readMonitor(int ID) {
 	constexpr u8 memAddr { SMS_STS_PRESENT_LOAD_L };
 	constexpr u8 nLen {4};
+	m_ackg = true;
 	u8 nData[4] {};
-	read(ID, memAddr, nData, nLen);
+	int returnLen { 0 };
+	returnLen = read(ID, memAddr, nData, nLen);
+	if (returnLen != 4) {
+		m_ackg = false;
+		std::cerr << "Fail to fetch motor information on ID " << ID << '\n';
+		return {0, 0, 0};
+	}
 	// nData now carries load (2 bytes), voltage, temperature
 	double load { static_cast<int>(nData[0] | (nData[1] << 8) ) * 0.1 };
 	double voltage { static_cast<int>(nData[2]) * 0.1 };
@@ -390,10 +485,10 @@ bool SMS_STS::isMoving(int ID)
 		move = Mem[SMS_STS_MOVING-SMS_STS_PRESENT_POSITION_L];	
 	}
 	else {
-		m_status = false;
+		m_ackg = true;
 		move = readByte(ID, SMS_STS_MOVING);
 		if ( move == -1 ) {
-			m_status = true;
+			m_ackg = false;
 		}
 	}
 	return move == 1;
@@ -406,10 +501,10 @@ int SMS_STS::readMode(int ID)
 		mode = Mem[SMS_STS_MODE-SMS_STS_PRESENT_POSITION_L];	
 	}
 	else {
-		m_status = false;
+		m_ackg = true;
 		mode = readByte(ID, SMS_STS_MODE);
 		if ( mode == -1 ) {
-			m_status = true;
+			m_ackg = false;
 		}
 	}
 	return mode;
@@ -424,14 +519,14 @@ double SMS_STS::readCurrent(int ID)
 		current |= Mem[SMS_STS_PRESENT_CURRENT_L-SMS_STS_PRESENT_POSITION_L];
 	}
 	else {
-		m_status = false;
+		m_ackg = true;
 		current = readWord(ID, SMS_STS_PRESENT_CURRENT_L);
 		if ( current == -1 ) {
-			m_status = true;
+			m_ackg = false;
 			return -1;
 		}
 	}
-	if ( !m_status && (current&(1<<15)) ) {
+	if ( !m_ackg && (current&(1<<15)) ) {
 		current = -(current&~(1<<15));
 	}	
 	constexpr double currentUnit { 6.5 };

@@ -11,13 +11,15 @@
 
 class SCS {
 // member variables
-public:
+protected:
 	u8 m_level {1}; // the level of the servo return
 	bool m_isBigEndian { false }; // processor endian structure
 	u8 m_error { 0 }; // the status of servo
 	u8 syncReadRxPacketIndex;
 	u8 syncReadRxPacketLen;
 	u8 *syncReadRxPacket;
+
+	bool m_ackg { false };
 
 // constructor
 public:
@@ -40,6 +42,8 @@ public:
 	int syncReadPacketRx(u8 ID, u8 *nDat); // read synchronously command receive, return the number of byte when succeed, return 0 when failed
 	int syncReadRxPacketToByte(); // decode one byte
 	int syncReadRxPacketToWord(u8 negBit=0); // decode 2 byte, negBit is the direction, 0 as none.
+
+	bool getAckg() const { return m_ackg; }
 
 // serial operation
 protected:

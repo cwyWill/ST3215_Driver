@@ -292,7 +292,7 @@ bool SCS::ack(u8 ID)
 		}
 		u8 calSum = ~(bBuf[0]+bBuf[1]+bBuf[2]);
 		if (calSum != bBuf[3]){
-			return 0;			
+			return false;			
 		}
 		m_error = bBuf[2];
 	}

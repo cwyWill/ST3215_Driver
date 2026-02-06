@@ -126,6 +126,7 @@ public:
 	// * Section where may be changed more often.
 	virtual bool writeMinAngle(u8 ID, u16 minAngle);
 	virtual bool writeMaxAngle(u8 ID, u16 maxAngle);
+	virtual bool resetMinMaxAngle(u8 ID);
 	virtual bool writeMultiCycle(u8 ID);
 	virtual bool writeTorqueLimit(u8 ID, u16 limit_permil);
 	virtual bool writePositionPID(u8 ID, u8 Pgain, u8 Igain, u8 Dgain);
@@ -167,11 +168,7 @@ public:
 // member variables
 private:
 	u8 Mem[SMS_STS_PRESENT_CURRENT_H-SMS_STS_PRESENT_POSITION_L+1];
-	bool m_status { false };
 
-// getter and setter
-public:
-	bool getStatus() const { return m_status; }
 };
 
 #endif
