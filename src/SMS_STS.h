@@ -153,6 +153,7 @@ public:
 	virtual ReadResult<bool> writePositionCorrection(int ID, u16 correction, bool posDirection);
 	virtual ReadResult<bool> writeAcceleration(int ID, u8 acc);
 	virtual ReadResult<bool> writePosition(int ID, s16 position);
+	virtual ReadResult<bool> writePositionRegister(int ID, s16 position);
 
 	virtual ReadResult<bool> writeSpeed(int ID, s16 speed);//speed loop mode ctrl command
 

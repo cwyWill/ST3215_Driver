@@ -24,6 +24,12 @@ enum class ReadStatus {
 	Other,
 };
 
+constexpr bool operator!(ReadStatus status) noexcept
+{
+    return status != ReadStatus::Okay;
+}
+
+
 template <typename T>
 struct ReadResult {
 	T value {};

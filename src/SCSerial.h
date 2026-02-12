@@ -19,7 +19,7 @@ public:
 	std::string m_port {"/dev/ttyACM0"};
 	BaudRate m_baudrate {BaudRate::r_1M};
 	boost::asio::serial_port m_serial;
-	int m_IOTimeOut_ms {1000};  //I/O timeout
+	int m_IOTimeOut_ms {100};  //I/O timeout
 
 // getters and setters
 public:

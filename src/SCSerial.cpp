@@ -32,47 +32,43 @@ SCSerial::SCSerial(std::string port, BaudRate rate, bool isBigEndian, u8 level) 
 
 int SCSerial::readSCS(unsigned char *nDat, int nLen)
 {
-	// int size = 0;
-	// u8 comData;
-	// Timer timer;
-
-	// while ( size < nLen ) {
-	// 	boost::asio::read(m_serial, boost::asio::buffer(&comData, 1));
-	// 	if( nDat ){
-	// 		nDat[size] = comData;
+	// std::size_t bytes_read { 0 };
+	// bool time_out { false };
+	
+	// boost::asio::steady_timer timer { m_io };
+	
+	// timer.expires_after(std::chrono::microseconds(m_IOTimeOut_ms));
+	// timer.async_wait([&](const boost::system::error_code& ec){
+	// 	if (!ec) {
+	// 		time_out = true;
+	// 		m_serial.cancel();
 	// 	}
-	// 	size++;
-	// }
+	// });
 
-	// return size;
+	// // start async read
+	// boost::asio::async_read(m_serial, boost::asio::buffer(nDat, nLen), [&](const boost::system::error_code& ec, std::size_t n) {
+	// 	if ( !ec ){
+	// 		bytes_read = n;
+	// 	}
+	// });
 
-	std::size_t bytes_read { 0 };
-	bool time_out { false };
+	// m_io.run();
+	// m_io.restart();
+
+	// return static_cast<int>(bytes_read);
+
+	boost::system::error_code ec;
+	std::size_t bytes_read {
+		boost::asio::read(
+			m_serial,
+			boost::asio::buffer(nDat, nLen),
+			ec
+		)
+	};
 	
-	boost::asio::steady_timer timer { m_io };
-	
-	timer.expires_after(std::chrono::microseconds(m_IOTimeOut_ms));
-	timer.async_wait([&](const boost::system::error_code& ec){
-		if (!ec) {
-			time_out = true;
-			m_serial.cancel();
-		}
-	});
-
-	// start async read
-	boost::asio::async_read(m_serial, boost::asio::buffer(nDat, nLen), [&](const boost::system::error_code& ec, std::size_t n) {
-		if ( !ec ){
-			bytes_read = n;
-		}
-	});
-
-	m_io.run();
-	m_io.restart();
-
-	// if ( time_out ) {
-	// 	std::cerr << "Serial read time out\n";
-	// }
-
+	if (ec) {
+		return 0;
+	}
 	return static_cast<int>(bytes_read);
 }
 

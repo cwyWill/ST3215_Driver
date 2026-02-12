@@ -209,12 +209,21 @@ ReadResult<bool> SMS_STS::writePositionCorrection(int ID, u16 correction, bool p
 }
 
 ReadResult<bool> SMS_STS::writePosition(int ID, s16 position) {
-	if(position < 0){
+	if ( position < 0 ){
 		position = -position;
 		position |= (1<<15);
 	}
 	return writeWord(ID, SMS_STS_GOAL_POSITION_L, static_cast<u16>(position));
 }
+
+ReadResult<bool> SMS_STS::writePositionRegister(int ID, s16 position) {
+	if ( position < 0 ) {
+		position = -position;
+		position |= (1<<15);
+	}
+	return writeWord(ID, SMS_STS_GOAL_POSITION_L, static_cast<u16>(position));
+}
+
 
 ReadResult<bool> SMS_STS::writeAcceleration(int ID, u8 acc) {
 	return writeByte(ID, SMS_STS_ACC, acc);
@@ -370,6 +379,7 @@ ServoFeedback SMS_STS::readFeedback(int ID) {
 	u8 bBuf[11];
 	ReadResult<int> result { read(ID, SMS_STS_PRESENT_POSITION_L, bBuf, 11) };
 	if ( result.status != ReadStatus::Okay ) {
+		std::cerr << "Fail to read feedback from motor ID: " << ID << '\n';
 		return { result.status };	// other variables ignored
 	}
 

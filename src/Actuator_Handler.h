@@ -64,6 +64,8 @@ public:
 
     bool setPosition(int position);
     bool setPosition(const std::vector<int>& index_list, std::vector<int> position_list);
+    bool setPositionRegister(const std::vector<int>& index_list, std::vector<int> position_list, bool pending = false);
+    bool actionTrigger();
 
     bool setSpeed(int speed);
     bool setSpeed(const std::vector<int>& index_list, std::vector<int> speed_list);
@@ -242,6 +244,47 @@ bool Actuator_Handler<numMotor>::setPosition(const std::vector<int>& index_list,
         }
     }
     return return_status;
+}
+
+template <int numMotor>
+bool Actuator_Handler<numMotor>::setPositionRegister(const std::vector<int>& index_list, std::vector<int> position_list, bool pending) {
+    assert( index_list.size() == position_list.size() && "Index list and position list should have the same size");
+    bool return_status { true };
+    for ( std::size_t idx { 0 }; idx < index_list.size(); ++idx ) {
+        int index { index_list[idx] };
+        assert( index < numMotor && "Index should not exceed number of motors");
+
+        int ID { m_motors[index].ID };
+        int position { position_list[idx] };
+
+        ReadResult<bool> result = m_ST.writePositionRegister(
+            ID,
+            static_cast<s16>(position)
+        );
+
+        if ( !result.status ) {
+            std::cerr << "Fail to assign position register, motor # " << index << '\n';
+            return_status = false;
+        }
+    }
+    if ( !pending ) {
+        ReadResult<bool> result = m_ST.regWriteAction();
+        if ( !result.okay ) {
+            std::cerr << "Fail to trigger action.\n";
+            return false;
+        }
+    }
+    return return_status;
+}
+
+template <int numMotor>
+bool Actuator_Handler<numMotor>::actionTrigger() {
+    ReadResult<bool> result = m_ST.regWriteAction();
+    if ( !result.status ) {
+        std::cerr << "Fail to trigger action.\n";
+        return false;
+    }
+    return true;
 }
 
 template <int numMotor>

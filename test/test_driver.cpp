@@ -28,21 +28,30 @@ int main() {
     } else {
         std::cerr << "Some motors are not responding.\n";
     }
+    std::this_thread::sleep_for(std::chrono::microseconds(5));
 
     // enable motors
     // move to position 1000 and 2000
     if ( !act.enableTorque() ) {
         std::cerr << "Fail to enable torque.\n";
     }
-    if ( !act.setPosition( std::vector<int>{0, 1}, std::vector<int>{1000, 2000} ) ) {
+    std::this_thread::sleep_for(std::chrono::microseconds(5));
+    if ( !act.setPosition( std::vector<int>{0, 1}, std::vector<int>{400, 2000} ) ) {
         std::cerr << "Fail to set position.\n";
     }
     std::this_thread::sleep_for(std::chrono::seconds(2));
+    act.updateAllFeedback();
+    
+    std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    if ( !act.setPosition( std::vector<int>{0, 1}, std::vector<int>{2000, 1000} ) ) {
+    std::cout << "Motor 0 position: " << act.getPosition({0})[0] << ", Motor 1 position: " << act.getPosition({1})[0] << '\n';
+
+    if ( !act.setPosition( std::vector<int>{0, 1}, std::vector<int>{2000, 500 } ) ) {
         std::cerr << "Fail to set position.\n";
     }
     std::this_thread::sleep_for(std::chrono::seconds(2));
+    act.updateAllFeedback();
+    std::cout << "Motor 0 position: " << act.getPosition({0})[0] << ", Motor 1 position: " << act.getPosition({1})[0] << '\n';
     
     return 0;
 }

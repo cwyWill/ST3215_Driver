@@ -289,24 +289,39 @@ ReadResult<bool> SCS::ping(int ID)
 
 bool SCS::checkHead()
 {
-	u8 bDat;
-	u8 bBuf[2] {0, 0};
-	u8 cnt { 0 };
-	while( true ){
-		if(!readSCS(&bDat, 1)){
-			return false;
-		}
-		bBuf[1] = bBuf[0];
-		bBuf[0] = bDat;
-		if ( bBuf[0]==0xff && bBuf[1]==0xff ){
-			break;
-		}
-		cnt++;
-		if( cnt > 10 ){
-			return false;
-		}
-	}
-	return true;
+	u8 prev { 0 };
+	u8 curr { 0 };
+
+	for (int i = 0; i < 100; ++i)
+    {
+        if (readSCS(&curr, 1) != 1)
+            return false;
+
+        if (prev == 0xFF && curr == 0xFF)
+            return true;
+
+        prev = curr;
+    }
+    return false;
+
+	// u8 bDat;
+	// u8 bBuf[2] {0, 0};
+	// int cnt { 0 };
+	// while( true ){
+	// 	if(!readSCS(&bDat, 1)){
+	// 		return false;
+	// 	}
+	// 	bBuf[1] = bBuf[0];
+	// 	bBuf[0] = bDat;
+	// 	if ( bBuf[0]==0xff && bBuf[1]==0xff ){
+	// 		break;
+	// 	}
+	// 	++cnt;
+	// 	if( cnt > 10 ){
+	// 		return false;
+	// 	}
+	// }
+	// return true;
 }
 
 ReadResult<bool> SCS::ack(int ID)
