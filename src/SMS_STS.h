@@ -7,9 +7,11 @@
 #ifndef _SMS_STS_H
 #define _SMS_STS_H
 
+#include "SCSerial.h"
 #include <string>
 #include <utility>
 #include <iostream>
+#include <chrono>
 
 using u8 = unsigned char;
 
@@ -72,22 +74,37 @@ constexpr u8 SMS_STS_MOVING { 66 };
 constexpr u8 SMS_STS_PRESENT_CURRENT_L { 69 };
 constexpr u8 SMS_STS_PRESENT_CURRENT_H { 70 };
 
+
+
 enum class OperationMode {
-	position_servo,
-	speed,
+	Position_servo,
+	Speed,
 	PWM,
+	Step_servo,
 };
 
 struct MonitorParams {
+	ReadStatus status {};
 	double load {};
 	double voltage {};
 	int temperature {};
 };
 
+struct ServoFeedback {
+	ReadStatus status {};
+	std::chrono::steady_clock::time_point timestamp {};
 
+	int position {};
+	int speed {};
+	double load {};
+	double voltage {};
+	int temperature {};
 
+	bool asyncFlag {};
+	u8 error {};
+	bool isMoving {};
+};
 
-#include "SCSerial.h"
 
 class SMS_STS : public SCSerial
 {
@@ -99,76 +116,79 @@ public:
 // write command
 public:
 	// ! deprecated. Avoid to use
-	virtual int writePosEx(u8 ID, s16 position, u16 speed, u8 acceleration = 0);//general write for single servo
-	virtual int regWritePosEx(u8 ID, s16 position, u16 speed, u8 acceleration = 0);//position write asynchronously for single servo(call RegWriteAction to action)
-	virtual void syncWritePosEx(u8 ID[], u8 IDN, s16 position[], u16 speed[], u8 acceleration[]);//write synchronously for multi servos
+	virtual ReadResult<bool> writePosEx(int ID, s16 position, u16 speed, u8 acceleration = 0);//general write for single servo
+	virtual ReadResult<bool> regWritePosEx(int ID, s16 position, u16 speed, u8 acceleration = 0);//position write asynchronously for single servo(call RegWriteAction to action)
+	virtual void syncWritePosEx(int ID[], u8 IDN, s16 position[], u16 speed[], u8 acceleration[]);//write synchronously for multi servos
 
 	// return bool: pure write
 	// return int:  read data back
 	
 
 	// * Not recommended to change these parameters/attributes
-	virtual bool writeBaudrate(u8 ID, BaudRate rate);
-	virtual bool writeReturnDelay(u8 ID, u8 delay_2us);
-	virtual bool writeTemperatureLimit(u8 ID, u8 limit);
-	virtual bool writeMinStartForce(u8 ID, u16 force_permil);
+	virtual ReadResult<bool> writeBaudrate(int ID, BaudRate rate);
+	virtual ReadResult<bool> writeReturnDelay(int ID, u8 delay_2us);
+	virtual ReadResult<bool> writeTemperatureLimit(int ID, u8 limit);
+	virtual ReadResult<bool> writeMinStartForce(int ID, u16 force_permil);
 	// clockwise, counterclockwise insensitive area
-	virtual bool writeMode(u8 ID, OperationMode mode);
-	virtual bool writeProtectiveTorque(u8 ID, u8 percent);
-	virtual bool writeSpeedPgain(u8 ID, u8 Pgain);
-	virtual bool writeSpeedIgain(u8 ID, u8 Igain);
-	virtual bool writeRunningtime(u8 ID, u16 runtime_permil);
+	virtual ReadResult<bool> writeMode(int ID, OperationMode mode);
+	virtual ReadResult<bool> writeProtectiveTorque(int ID, u8 percent);
+	virtual ReadResult<bool> writeSpeedPgain(int ID, u8 Pgain);
+	virtual ReadResult<bool> writeSpeedIgain(int ID, u8 Igain);
+	virtual ReadResult<bool> writeRunningtime(int ID, u16 runtime_permil);
 	// virtual bool writeOverCurrentProtectTime(u8 ID, u8 time_10ms);
 
 	// * Use carefully with only one servo on the bus
-	virtual bool writeID(u8 ID, u8 newID);
+	virtual ReadResult<bool> writeID(int ID, u8 newID);
 
 	// * Section where may be changed more often.
-	virtual bool writeMinAngle(u8 ID, u16 minAngle);
-	virtual bool writeMaxAngle(u8 ID, u16 maxAngle);
-	virtual bool resetMinMaxAngle(u8 ID);
-	virtual bool writeMultiCycle(u8 ID);
-	virtual bool writeTorqueLimit(u8 ID, u16 limit_permil);
-	virtual bool writePositionPID(u8 ID, u8 Pgain, u8 Igain, u8 Dgain);
-	virtual bool writePositionPgain(u8 ID, u8 Pgain);
-	virtual bool writePositionIgain(u8 ID, u8 Igain);
-	virtual bool writePositionDgain(u8 ID, u8 Dgain);
-	virtual bool writePositionCorrection(u8 ID, u16 correction, bool posDirection);
-	virtual bool writeAcceleration(u8 ID, u8 acc);
-	virtual bool writePosition(u8 ID, s16 position);
+	virtual ReadResult<bool> writeMinAngle(int ID, u16 minAngle);
+	virtual ReadResult<bool> writeMaxAngle(int ID, u16 maxAngle);
+	virtual ReadResult<bool> resetMinMaxAngle(int ID);
+	virtual ReadResult<bool> writeMultiCycle(int ID);
+	virtual ReadResult<bool> writeTorqueLimit(int ID, u16 limit_permil);
+	virtual ReadResult<bool> writePositionPID(int ID, u8 Pgain, u8 Igain, u8 Dgain);
+	virtual ReadResult<bool> writePositionPgain(int ID, u8 Pgain);
+	virtual ReadResult<bool> writePositionIgain(int ID, u8 Igain);
+	virtual ReadResult<bool> writePositionDgain(int ID, u8 Dgain);
+	virtual ReadResult<bool> writePositionCorrection(int ID, u16 correction, bool posDirection);
+	virtual ReadResult<bool> writeAcceleration(int ID, u8 acc);
+	virtual ReadResult<bool> writePosition(int ID, s16 position);
 
-	virtual bool writeSpeed(u8 ID, s16 speed, u8 acceleartion = 0);//speed loop mode ctrl command
+	virtual ReadResult<bool> writeSpeed(int ID, s16 speed);//speed loop mode ctrl command
 
-	// ! deprecated
-	virtual bool wheelMode(u8 ID);//speed loop mode
-
-	//
-	virtual bool enableTorque(u8 ID);//torque ctrl command
-	virtual bool disableTorque(u8 ID);//torque ctrl command
-	virtual bool unlockEEPROM(u8 ID);//eprom unlock
-	virtual bool lockEEPROM(u8 ID);//eprom locked
-	virtual bool offsetCalibration(u8 ID);//set middle position
+	virtual ReadResult<bool> enableTorque(int ID);//torque ctrl command
+	virtual ReadResult<bool> disableTorque(int ID);//torque ctrl command
+	virtual ReadResult<bool> unlockEEPROM(int ID);//eprom unlock
+	virtual ReadResult<bool> lockEEPROM(int ID);//eprom locked
+	virtual ReadResult<bool> offsetCalibration(int ID);//set middle position
 
 // read information
 public:
-	virtual int feedback(int ID);//servo information feedback
-	virtual int readPosition(int ID);//read position
-	virtual int readSpeed(int ID);//read speed
-	virtual double readLoad(int ID);//read motor load(0~1000, 1000 = 100% max load)
-	virtual double readVoltage(int ID);//read voltage
-	virtual int readTemp(int ID);//read temperature
-	virtual double readCurrent(int ID);//read current
-	virtual int readMode(int ID);//read working mode
-	virtual bool isMoving(int ID);//read move mode
-	virtual void printInfo(int ID);
-	virtual MonitorParams readMonitor(int ID);
+	// virtual ReadResult<bool> feedback(int ID);//servo information feedback
+	virtual ReadResult<int> readPosition(int ID);//read position
+	virtual ReadResult<int> readSpeed(int ID);//read speed
+	virtual ReadResult<double> readLoad(int ID);//read motor load(0~1000, 1000 = 100% max load)
+	virtual ReadResult<double> readVoltage(int ID);//read voltage
+	virtual ReadResult<int> readTemp(int ID);//read temperature
+	virtual ReadResult<double> readCurrent(int ID);//read current
+	virtual ReadResult<OperationMode> readMode(int ID);//read working mode
+	virtual ReadResult<bool> isMoving(int ID);//read move mode
 
-	// virtual std::pair<s16, u16> readPosSpeed(int ID);
+	virtual ServoFeedback readFeedback(int ID);
+
+public:
+	constexpr static int s_broadcastID { 254 };
 
 // member variables
 private:
 	u8 Mem[SMS_STS_PRESENT_CURRENT_H-SMS_STS_PRESENT_POSITION_L+1];
 
+// protocol based constant
+private:
+	constexpr static double s_loadUnit { 0.1 };
+	constexpr static double s_voltageUnit { 0.1 };
+	constexpr static double s_currentUnit { 6.5 };
 };
 
-#endif
+#endif	// _SMS_STS_H
+

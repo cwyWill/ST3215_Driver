@@ -23,7 +23,6 @@ public:
 
 // getters and setters
 public:
-	virtual int getErr() const { return m_error; }
 	void setTimeout_ms(int timeout_ms) { m_IOTimeOut_ms = timeout_ms; }
 
 // constructors

@@ -8,6 +8,36 @@
 #include "SCS.h"
 #include <iostream>
 
+
+std::ostream& operator<<(std::ostream& out, ReadStatus status) {
+	switch (status)
+	{
+	case ReadStatus::Okay:
+		out << "okay"; break;
+	case ReadStatus::Timeout:
+		out << "timeout"; break;
+	case ReadStatus::ProtocolError:
+		out << "protocol"; break;
+	case ReadStatus::ReadSessionError:
+		out << "session"; break;
+	case ReadStatus::HeaderError:
+		out << "header"; break;
+	case ReadStatus::ID_CheckError:
+		out << "ID"; break;
+	case ReadStatus::ChecksumError:
+		out << "checksum"; break;
+	case ReadStatus::LengthError:
+		out << "return length"; break;
+	case ReadStatus::Abort:
+		out << "abort"; break;
+	case ReadStatus::Other:
+		out << "unknown"; break;
+	default:
+		out << "what the heck"; break;
+	}
+	return out;
+}
+
 SCS::SCS() :
 	SCS{ false, 1}
 { }
@@ -51,14 +81,17 @@ u16 SCS::SCS2Host(u8 dataL, u8 dataH)
 	return data;
 }
 
-void SCS::writeBuf(u8 ID, u8 memAddr, u8 *nDat, u8 nLen, u8 instr)
+void SCS::writeBuf(int ID, u8 memAddr, u8 *nDat, u8 nLen, u8 instr)
 {
+	if ( ID > 254 ){
+		return;
+	}
 	u8 msgLen = 2;
 	u8 bBuf[6];
 	u8 CheckSum = 0;
 	bBuf[0] = 0xff;
 	bBuf[1] = 0xff;
-	bBuf[2] = ID;
+	bBuf[2] = static_cast<u8>(ID);
 	bBuf[4] = instr;
 	if(nDat){
 		msgLen += nLen + 1;
@@ -83,7 +116,7 @@ void SCS::writeBuf(u8 ID, u8 memAddr, u8 *nDat, u8 nLen, u8 instr)
 
 // general write command.
 // the ID of the servo, the memory address in memory table, the data to write, the length of data
-bool SCS::genWrite(u8 ID, u8 memAddr, u8 *nDat, u8 nLen)
+ReadResult<bool> SCS::genWrite(int ID, u8 memAddr, u8 *nDat, u8 nLen)
 {
 	rFlushSCS();
 	writeBuf(ID, memAddr, nDat, nLen, static_cast<u8>(Instruction::write));
@@ -93,7 +126,7 @@ bool SCS::genWrite(u8 ID, u8 memAddr, u8 *nDat, u8 nLen)
 
 // write asynchronously.
 // the ID of the servo，the memory address in memory table，the data to write，the length of data
-bool SCS::regWrite(u8 ID, u8 memAddr, u8 *nDat, u8 nLen)
+ReadResult<bool> SCS::regWrite(int ID, u8 memAddr, u8 *nDat, u8 nLen)
 {
 	rFlushSCS();
 	writeBuf(ID, memAddr, nDat, nLen, static_cast<u8>(Instruction::regWrite));
@@ -104,7 +137,7 @@ bool SCS::regWrite(u8 ID, u8 memAddr, u8 *nDat, u8 nLen)
 // the trigger command for regWrite()
 // call this function to start the regWrite() command
 // ID: the ID of the servo
-bool SCS::RegWriteAction(u8 ID)
+ReadResult<bool> SCS::regWriteAction(int ID)
 {
 	rFlushSCS();
 	writeBuf(ID, 0, NULL, 0, static_cast<u8>(Instruction::regAction));
@@ -115,7 +148,7 @@ bool SCS::RegWriteAction(u8 ID)
 // write synchronously.
 // the list of servo IDs, the length(number) of the ID list, the memory address in memory table,
 // the data to write, the length of data.
-void SCS::syncWrite(u8 ID[], u8 IDN, u8 memAddr, u8 *nDat, u8 nLen)
+void SCS::syncWrite(int ID[], u8 IDN, u8 memAddr, u8 *nDat, u8 nLen)
 {
 	rFlushSCS();
 	u8 mesLen = ((nLen+1)*IDN+4);
@@ -144,7 +177,7 @@ void SCS::syncWrite(u8 ID[], u8 IDN, u8 memAddr, u8 *nDat, u8 nLen)
 	wFlushSCS();
 }
 
-bool SCS::writeByte(u8 ID, u8 memAddr, u8 bDat)
+ReadResult<bool> SCS::writeByte(int ID, u8 memAddr, u8 bDat)
 {
 	rFlushSCS();
 	writeBuf(ID, memAddr, &bDat, 1, static_cast<u8>(Instruction::write));
@@ -152,7 +185,7 @@ bool SCS::writeByte(u8 ID, u8 memAddr, u8 bDat)
 	return ack(ID);
 }
 
-bool SCS::writeWord(u8 ID, u8 memAddr, u16 wDat)
+ReadResult<bool> SCS::writeWord(int ID, u8 memAddr, u16 wDat)
 {
 	u8 bBuf[2];
 	Host2SCS(bBuf+0, bBuf+1, wDat);
@@ -164,25 +197,33 @@ bool SCS::writeWord(u8 ID, u8 memAddr, u16 wDat)
 
 // read command
 // the ID of servo, the memory address in memory table, the return data, the length of data
-int SCS::read(u8 ID, u8 memAddr, u8 nData[], u8 nLen)
+ReadResult<int> SCS::read(int ID, u8 memAddr, u8 nData[], u8 nLen)
 {
 	rFlushSCS();
 	writeBuf(ID, memAddr, &nLen, 1, static_cast<u8>(Instruction::read));
 	wFlushSCS();
-	if(!checkHead()){
-		return 0;
+	if( !checkHead() ) {
+		return {0, ReadStatus::HeaderError};
 	}
 	u8 bBuf[4];
-	m_error = 0;
 	if ( readSCS(bBuf, 3) != 3 ) {
-		return 0;
+		return {0, ReadStatus::ReadSessionError};
 	}
+	u8 returnID = bBuf[0];
+	if ( returnID != ID ) {
+		return {0, ReadStatus::ID_CheckError};
+	}
+	u8 dataLength = bBuf[1];
+	if ( dataLength != (nLen+2) ) {
+		return {0, ReadStatus::LengthError};
+	}
+	u8 workingError = bBuf[2];
 	int size = readSCS(nData, nLen);
 	if( size != nLen ) {
-		return 0;
+		return {0, ReadStatus::LengthError};
 	}
 	if ( readSCS(bBuf+3, 1) != 1 ) {
-		return 0;
+		return {0, ReadStatus::ReadSessionError};
 	}
 	u8 calSum = bBuf[0] + bBuf[1] + bBuf[2];
 	for(int i=0; i<size; i++) {
@@ -191,64 +232,59 @@ int SCS::read(u8 ID, u8 memAddr, u8 nData[], u8 nLen)
 	calSum = ~calSum;
 
 	if(calSum != bBuf[3]) {
-		return 0;
+		return {0, ReadStatus::ChecksumError};
 	}
-	m_error = bBuf[2];
-	return size;
+	return {size, ReadStatus::Okay, workingError};
 }
 
 // read 1 byte from servo, return -1 when timeout
-int SCS::readByte(u8 ID, u8 memAddr)
+ReadResult<int> SCS::readByte(int ID, u8 memAddr)
 {
 	u8 bDat;
-	int size = read(ID, memAddr, &bDat, 1);
-	if (size != 1) {
-		return -1;
+	ReadResult<int> result = read(ID, memAddr, &bDat, 1);
+	if (result.status != ReadStatus::Okay) {
+		return {0, result.status};
 	}
-	else {
-		return bDat;
-	}
+	return {static_cast<int>(bDat), result.status, result.workingError};
 }
 
 // read 2 byte from servo, return -1 when timeout
-int SCS::readWord(u8 ID, u8 memAddr)
+ReadResult<int> SCS::readWord(int ID, u8 memAddr)
 {	
 	u8 nDat[2];
-	int size;
 	u16 wDat;
-	size = read(ID, memAddr, nDat, 2);
-	if (size != 2)
-		return -1;
+	ReadResult<int> result = read(ID, memAddr, nDat, 2);
+	if (result.status != ReadStatus::Okay)
+		return {0, result.status};
 	wDat = SCS2Host(nDat[0], nDat[1]);
-	return wDat;
+	return {static_cast<int>(wDat), result.status, result.workingError};
 }
 
 // Ping command, return the ID of servo, return -1 when timeout.
-bool SCS::ping(u8 ID)
+ReadResult<bool> SCS::ping(int ID)
 {
 	rFlushSCS();
 	writeBuf(ID, 0, NULL, 0, static_cast<u8>(Instruction::ping));
 	wFlushSCS();
-	m_error = 0;
 	if ( !checkHead() ){
-		return -1;
+		return {false, ReadStatus::HeaderError};
 	}
 	u8 bBuf[4];
 	if ( readSCS(bBuf, 4) != 4 ) {
-		return -1;
+		return {false, ReadStatus::ReadSessionError};
 	}
 	if ( bBuf[0] != ID && ID != 0xfe ) {
-		return -1;
+		return {false, ReadStatus::ID_CheckError};
 	}
 	if (bBuf[1]!=2){
-		return -1;
+		return {false, ReadStatus::LengthError};
 	}
+	u8 workingError { bBuf[2] };
 	u8 calSum = ~(bBuf[0]+bBuf[1]+bBuf[2]);
 	if ( calSum != bBuf[3] ) {
-		return -1;			
+		return {false, ReadStatus::ChecksumError};
 	}
-	m_error = bBuf[2];
-	return bBuf[0];
+	return { (workingError == 0), ReadStatus::Okay, workingError};
 }
 
 bool SCS::checkHead()
@@ -273,30 +309,30 @@ bool SCS::checkHead()
 	return true;
 }
 
-bool SCS::ack(u8 ID)
+ReadResult<bool> SCS::ack(int ID)
 {
-	m_error = 0;
-	if(ID!=0xfe && m_level){
-		if(!checkHead()){
-			return false;
-		}
-		u8 bBuf[4];
-		if (readSCS(bBuf, 4)!=4){
-			return false ;
-		}
-		if (bBuf[0] != ID){
-			return false;
-		}
-		if (bBuf[1] != 2){
-			return false;
-		}
-		u8 calSum = ~(bBuf[0]+bBuf[1]+bBuf[2]);
-		if (calSum != bBuf[3]){
-			return false;			
-		}
-		m_error = bBuf[2];
+	if ( ID == 0xFE ) {
+		return {false, ReadStatus::Broadcast, 0 };
 	}
-	return true;
+	if(!checkHead()){
+		return { false, ReadStatus::HeaderError, 0 };
+	}
+	u8 bBuf[4];
+	if (readSCS(bBuf, 4)!=4){
+		return { false, ReadStatus::ReadSessionError, 0 };
+	}
+	if (bBuf[0] != ID){
+		return { false, ReadStatus::ID_CheckError, 0 };
+	}
+	if (bBuf[1] != 2){
+		return { false, ReadStatus::LengthError, 0 };
+	}
+	u8 calSum = ~(bBuf[0]+bBuf[1]+bBuf[2]);
+	if (calSum != bBuf[3]){
+		return { false, ReadStatus::ChecksumError, 0 };
+	}
+	u8 workingError { bBuf[2] };
+	return { true, ReadStatus::Okay, workingError };
 }
 
 int	SCS::syncReadPacketTx(u8 ID[], u8 IDN, u8 memAddr, u8 nLen)
@@ -337,7 +373,7 @@ int SCS::syncReadPacketRx(u8 ID, u8 *nDat)
 	if(bBuf[1]!=(syncReadRxPacketLen+2)){
 		return 0;
 	}
-	m_error = bBuf[2];
+	[[maybe_unused]] u8 workingError { bBuf[2] };
 	if(readSCS(nDat, syncReadRxPacketLen)!=syncReadRxPacketLen){
 		return 0;
 	}

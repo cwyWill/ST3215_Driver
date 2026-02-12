@@ -8,18 +8,49 @@
 #define _SCS_H
 
 #include "INST.h"
+#include <iostream>
+
+enum class ReadStatus {
+	Okay,
+	Broadcast,
+	Timeout,
+	ProtocolError,
+	ReadSessionError,
+	HeaderError,
+	ID_CheckError,
+	ChecksumError,
+	LengthError,
+	Abort,
+	Other,
+};
+
+template <typename T>
+struct ReadResult {
+	T value {};
+	ReadStatus status { ReadStatus::Okay };
+	u8 workingError { 0 }; // the error code returned by servo, only valid when status is Okay
+};
+
+template <>
+struct ReadResult<bool> {
+	bool okay { true };
+	ReadStatus status { ReadStatus::Okay };
+	u8 workingError { 0 };
+};
+
+std::ostream& operator<<(std::ostream& out, ReadStatus status);
+
 
 class SCS {
 // member variables
 protected:
 	u8 m_level {1}; // the level of the servo return
 	bool m_isBigEndian { false }; // processor endian structure
-	u8 m_error { 0 }; // the status of servo
 	u8 syncReadRxPacketIndex;
 	u8 syncReadRxPacketLen;
 	u8 *syncReadRxPacket;
 
-	bool m_ackg { false };
+	// ReadStatus m_ackg { ReadStatus::Okay };
 
 // constructor
 public:
@@ -28,22 +59,23 @@ public:
 	SCS(bool isBigEndian, u8 level);
 
 public:
-	bool genWrite(u8 ID, u8 memAddr, u8 *nDat, u8 nLen); // general write
-	bool regWrite(u8 ID, u8 memAddr, u8 *nDat, u8 nLen); // write asynchronously
-	bool RegWriteAction(u8 ID = 0xfe); // trigger command for regWrite()
-	void syncWrite(u8 ID[], u8 IDN, u8 memAddr, u8 *nDat, u8 nLen); // write synchronously
-	bool writeByte(u8 ID, u8 memAddr, u8 bDat); // write 1 byte
-	bool writeWord(u8 ID, u8 memAddr, u16 wDat); // write 2 byte
-	int read(u8 ID, u8 memAddr, u8 *nData, u8 nLen); // read command
-	int readByte(u8 ID, u8 memAddr); // read 1 byte
-	int readWord(u8 ID, u8 memAddr); // read 2 byte
-	bool ping(u8 ID); // Ping command
+	ReadResult<bool> genWrite(int ID, u8 memAddr, u8 *nDat, u8 nLen); // general write
+	ReadResult<bool> regWrite(int ID, u8 memAddr, u8 *nDat, u8 nLen); // write asynchronously
+	ReadResult<bool> regWriteAction(int ID = 0xfe); // trigger command for regWrite()
+	void syncWrite(int ID[], u8 IDN, u8 memAddr, u8 *nDat, u8 nLen); // write synchronously
+	ReadResult<bool> writeByte(int ID, u8 memAddr, u8 bDat); // write 1 byte
+	ReadResult<bool> writeWord(int ID, u8 memAddr, u16 wDat); // write 2 byte
+
+	ReadResult<int> read(int ID, u8 memAddr, u8 *nData, u8 nLen); // read command
+	ReadResult<int> readByte(int ID, u8 memAddr); // read 1 byte
+	ReadResult<int> readWord(int ID, u8 memAddr); // read 2 byte
+	ReadResult<bool> ping(int ID); // Ping command
+
 	int syncReadPacketTx(u8 ID[], u8 IDN, u8 memAddr, u8 nLen); // read synchronously command send
 	int syncReadPacketRx(u8 ID, u8 *nDat); // read synchronously command receive, return the number of byte when succeed, return 0 when failed
 	int syncReadRxPacketToByte(); // decode one byte
 	int syncReadRxPacketToWord(u8 negBit=0); // decode 2 byte, negBit is the direction, 0 as none.
 
-	bool getAckg() const { return m_ackg; }
 
 // serial operation
 protected:
@@ -53,10 +85,10 @@ protected:
 	virtual void rFlushSCS() = 0;
 	virtual void wFlushSCS() = 0;
 protected:
-	void writeBuf(u8 ID, u8 memAddr, u8 *nDat, u8 nLen, u8 instr);
+	void writeBuf(int ID, u8 memAddr, u8 *nDat, u8 nLen, u8 instr);
 	void Host2SCS(u8 *dataL, u8* dataH, u16 data); // one 16-digit number split into two 8-digit numbers
 	u16	SCS2Host(u8 dataL, u8 dataH); // combination of two 8-digit numbers into one 16-digit number
-	bool ack(u8 ID); // return response
+	ReadResult<bool> ack(int ID); // return response
 	bool checkHead(); // Frame header detection
 };
 #endif

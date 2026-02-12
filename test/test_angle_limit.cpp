@@ -20,26 +20,22 @@ int main() {
 
     constexpr int ID {4};
 
-    st.printInfo(ID);
 
     std::cout << "Set motor position to " << 2048 << '\n';
     st.writePosition(ID, 2048);
     
-    std::cout << "Motor status: " << std::boolalpha << st.isMoving(ID)  << ", position: "<< st.readPosition(ID) << '\n';
+    // std::cout << "Motor status: " << std::boolalpha << st.isMoving(ID).value  << ", position: "<< st.readPosition(ID).value << '\n';
 
     sleep_sec(1);
-    st.printInfo(ID);
-    std::cout << "Motor status: " << std::boolalpha << st.isMoving(ID)  << ", position: "<< st.readPosition(ID) << '\n';
+    // std::cout << "Motor status: " << std::boolalpha << st.isMoving(ID).value  << ", position: "<< st.readPosition(ID).value << '\n';
 
-    sleep_sec(8);
-    st.printInfo(ID);
-    std::cout << "Motor status: " << std::boolalpha << st.isMoving(ID)  << ", position: "<< st.readPosition(ID) << '\n';
+    sleep_sec(1);
+    // std::cout << "Motor status: " << std::boolalpha << st.isMoving(ID).value  << ", position: "<< st.readPosition(ID).value << '\n';
 
-    std::cout << "Set motor position to " << 2048+4096*2 << '\n';
+    std::cout << "Set motor position to " << 4095 << '\n';
     st.writePosition(ID, 4095);
-    sleep_sec(8);
-    st.printInfo(ID);
-    std::cout << "Motor status: " << std::boolalpha << st.isMoving(ID)  << ", position: "<< st.readPosition(ID) << '\n';
+    sleep_sec(1);
+    // std::cout << "Motor status: " << std::boolalpha << st.isMoving(ID).value  << ", position: "<< st.readPosition(ID).value << '\n';
     
     return 0;
 }
