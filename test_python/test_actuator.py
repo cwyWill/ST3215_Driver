@@ -4,8 +4,8 @@ import time
 import numpy as np
 
 # act = STACT.Actuator("COM7", [1,])
-ID = [11, 12, 13, 14, 15, 16,]
-indices = [0,]
+ID = [4, 5]
+indices = [0, 1]
 act = Actuator("/dev/ttyACM0", ID)
 
 act.torque_disable()

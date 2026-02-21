@@ -8,13 +8,13 @@ target_link_libraries(test_driver
     PRIVATE ST3215_Driver
 )
 
-add_executable(test_angle_limit
-    test_angle_limit.cpp
-)
+# add_executable(test_angle_limit
+#     test_angle_limit.cpp
+# )
 
-target_link_libraries(test_angle_limit
-    PRIVATE ST3215_Driver
-)
+# target_link_libraries(test_angle_limit
+#     PRIVATE ST3215_Driver
+# )
 
 # target_compile_options(test_driver PRIVATE -Wall -Wextra -Wpedantic)
 

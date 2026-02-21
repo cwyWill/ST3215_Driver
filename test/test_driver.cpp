@@ -11,48 +11,57 @@
 
 int main() {
 
-    // SMS_STS st{"/dev/ttyACM0", BaudRate::r_1M};
-    // std::cout << "Port starts successfully\n";
+    SMS_STS st{"/dev/ttyACM0", BaudRate::r_1M};
 
     using namespace Actuator;
     Actuator_Handler<2> act {
         std::array<ServoMotor, 2> {
-            ServoMotor{ .ID = 4 },
-            ServoMotor{ .ID = 5 }
+            ServoMotor{
+                4,
+                ServoCalibration{ .correction = 2047, .targetAngleLimit = {0, 4095}, .posDirection = false },
+                st
+            },
+            ServoMotor{
+                5,
+                ServoCalibration{ .correction = 2047, .targetAngleLimit = {0, 4095}, .posDirection = false },
+                st
+            }
         },
-        "/dev/ttyACM0",
-        BaudRate::r_1M
+        st
     };
 
-    if ( act.selfInsepct() ) {
+    // self inspection
+    if ( act.selfInspect() ) {
         std::cout << "All motors are responding.\n";
     } else {
         std::cerr << "Some motors are not responding.\n";
     }
     std::this_thread::sleep_for(std::chrono::microseconds(5));
 
-    // enable motors
-    // move to position 1000 and 2000
-    // if ( !act.enableTorque() ) {
-    //     std::cerr << "Fail to enable torque.\n";
-    // }
-    std::this_thread::sleep_for(std::chrono::microseconds(5));
-    // if ( !act.setPosition( std::vector<int>{0, 1}, std::vector<int>{400, 2000} ) ) {
-        // std::cerr << "Fail to set position.\n";
-    // }
-    // std::this_thread::sleep_for(std::chrono::seconds(2));
-    act.updateAllFeedback();
-    
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    act.setAngle( 0 );
+    std::this_thread::sleep_for(std::chrono::seconds(2));
 
-    std::cout << "Motor 0 position: " << act.getPosition({0})[0] << ", Motor 1 position: " << act.getPosition({1})[0] << '\n';
-
-    // if ( !act.setPosition( std::vector<int>{0, 1}, std::vector<int>{2000, 500 } ) ) {
-    //     std::cerr << "Fail to set position.\n";
-    // }
-    // std::this_thread::sleep_for(std::chrono::seconds(2));
     act.updateAllFeedback();
-    std::cout << "Motor 0 position: " << act.getPosition({0})[0] << ", Motor 1 position: " << act.getPosition({1})[0] << '\n';
+    std::cout << "Motor 0 position: " << act.getAngle({0})[0] << ", Motor 1 position: " << act.getAngle({1})[0] << '\n';
+
+
+    act.setAngle( M_PI_2 );
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    act.updateAllFeedback();
+    std::cout << "Motor 0 position: " << act.getAngle({0})[0] << ", Motor 1 position: " << act.getAngle({1})[0] << '\n';
     
+    act.setAngle( -3 );
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    act.updateAllFeedback();
+    std::cout << "Motor 0 position: " << act.getAngle({0})[0] << ", Motor 1 position: " << act.getAngle({1})[0] << '\n';
+
+    act.setAngle( 3 );
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    act.updateAllFeedback();
+    std::cout << "Motor 0 position: " << act.getAngle({0})[0] << ", Motor 1 position: " << act.getAngle({1})[0] << '\n';
+    act.setAngle( 0 );
     return 0;
 }
