@@ -6,6 +6,11 @@
 #include <vector>
 #include <string>
 #include <utility>
+#include <cmath>
+#include <algorithm>
+#include <cstdint>
+
+namespace Actuator {
 
 struct PID_Gains {
     int P {};
@@ -14,56 +19,134 @@ struct PID_Gains {
 };
 
 
-template <int numMotor>
+template <std::size_t numMotor>
 std::array<int, numMotor> array_in_range(int b);
 
-template <int numMotor>
+template <std::size_t numMotor>
 std::array<int, numMotor> array_in_range(int b1, int b2);
 
+/**
+ * Angle limit in step unit, typically 0-4095, corresponding to 0-360 degree.
+ * 
+ * minStep: (int32_t) the minimum step of the servo
+ * maxStep: (int32_t) the maximum step of the servo
+ */
 struct AngleLimitSteps {
-    int minStep { 0 };
-    int maxStep { 4095 };
+    int32_t minStep { 0 };
+    int32_t maxStep { 4095 };
+    constexpr AngleLimitSteps(int32_t a = 0, int32_t b = 4095) :
+        minStep{ a < b ? a : b},
+        maxStep{ a < b ? b : a}
+    {}
+    constexpr bool contains (int32_t step) const noexcept {
+        return step >= minStep && step <= maxStep;
+    }
 };
 
+/**
+ * Servo motor command parameters.
+ * 
+ * targetPosition: (int16_t) the target position of the servo.
+ * targetSpeed: (int16_t) the target speed of the servo.
+*/
 struct ServoCommand {
-    int targetPosition {};
-    int targetSpeed {};
-    AngleLimitSteps targetAngleLimit {};
+    int16_t targetPosition {};
+    int16_t targetSpeed {};
 };
 
-struct ServoMotorState {
-    const int ID { };
-    OperationMode mode { OperationMode::Position_servo };
 
-    ServoCommand command{};
+/**
+ * Servo motor calibration parameters, including correction, angle limit, and position direction.
+ * 
+ * correction: (int32_t) 0-4095. Typically around 2047.
+ * targetAngleLimit: (AngleLimitSteps) 0-4095.
+ * posDirection: (bool) position direction.
+*/
+struct ServoCalibration {
 
+    int32_t correction { 2047 };
+    AngleLimitSteps targetAngleLimit {0, 4095};
+    bool posDirection { false };
+
+    static constexpr double resolution { M_PI / 2048.0 };
+    static constexpr double invResolution { 2048.0 / M_PI };
+
+    constexpr bool inAngleLimit(int32_t position) const noexcept {
+        return targetAngleLimit.contains( position  );
+    }
+    int32_t angleToStep(double angle) const noexcept {
+        const int32_t delta { static_cast<int32_t>( std::round( angle * invResolution) ) };
+        return posDirection ? correction - delta : correction + delta;
+    }
+    double stepToAngle(int32_t step) const noexcept {
+        const int32_t delta = posDirection ? correction - step : step - correction;
+        return static_cast<double>(delta) * resolution;
+    }
+};
+
+/**
+ * Servo motor state, including ID, calibration parameters, feedback, command, and working mode.
+ * ID: (uint8_t) the ID of the servo.
+ * calibration: (ServoCalibration) the calibration parameters of the servo.
+ * feedback: (ServoFeedback) the feedback from the servo, including position, speed, load, ...
+ * command: (ServoCommand) the command to be sent to the servo, including target position and speed.
+ * mode: (OperationMode) the working mode of the servo, including position servo, speed servo, etc.
+ */
+struct ServoMotor {
+    const uint8_t ID { };
+    ServoCalibration calibration {};
     ServoFeedback feedback {};
+    ServoCommand command{};
+    OperationMode mode { OperationMode::Position_servo };
 };
 
 
-template <int numMotor>
+template <std::size_t numMotor>
 class Actuator_Handler {
 public:
-    Actuator_Handler(std::array<ServoMotorState, numMotor> motors, std::string port);
-    Actuator_Handler(std::array<ServoMotorState, numMotor> motors, std::string port, BaudRate rate);
+    Actuator_Handler(std::array<ServoMotor, numMotor> motors, std::string port);
+    Actuator_Handler(std::array<ServoMotor, numMotor> motors, std::string port, BaudRate rate);
 
 public:
-
-public:
-    // inspect all motors for abnormal status
+    /**
+     * return true if all motors are responding, false otherwise.
+     */
     bool selfInsepct();
 
-    // display load, voltage, temperature, etc
+    /**
+     * display the feedback of all motors, including position, speed, load, voltage, temperature, etc.
+     */
     bool display();
 
+    /**
+     * enable torque for all motors or a subset of motors.
+     * return true if all motors are successfully enabled, false otherwise.
+     */
     bool enableTorque();
     bool enableTorque(const std::vector<int>& index_list);
 
+    /**
+     * disable torque for all motors or a subset of motors.
+     * return true if all motors are successfully disabled, false otherwise.
+     */
     bool disableTorque();
     bool disableTorque(const std::vector<int>& index_list);
 
+    /**
+     * set position for all motors or a subset of motors.
+     * return true if all motors are successfully set, false otherwise.
+     */
     bool setPosition(int position);
-    bool setPosition(const std::vector<int>& index_list, std::vector<int> position_list);
+    bool setPosition(const std::array<int, numMotor>& position_list);
+    bool setPosition(const std::vector<int>& index_list, const std::vector<int> position_list);
+
+    /**
+     * set action position for a subset of motors. Action command is sent if pending is false.
+     * @param index_list: the index of the motors to be set
+     * @param position_list: the target position of the motors to be set
+     * @param pending: whether to send action command after setting the position register.
+     * return true if all motors are successfully set, false otherwise.
+     */
     bool setPositionRegister(const std::vector<int>& index_list, std::vector<int> position_list, bool pending = false);
     bool actionTrigger();
 
@@ -94,12 +177,10 @@ public:
     bool configurePositionPID(int index, PID_Gains gains);
     bool configureMode(int index, OperationMode mode);
 
-
-
+// member variables
 protected:
     SMS_STS m_ST {"/dev/ttyACM0", BaudRate::r_1M};
-    std::array<ServoMotorState, numMotor> m_motors {};
-    std::array<int, numMotor> m_index_list {};
+    std::array<ServoMotor, numMotor> m_motors {};
 
 private:
     template <typename T>
@@ -112,12 +193,12 @@ private:
 
 // Implementation starts here
 
-template <int numMotor>
+template <std::size_t numMotor>
 std::array<int, numMotor> array_in_range(int b) {
     return array_in_range<int, numMotor>(0, b);
 }
 
-template <int numMotor>
+template <std::size_t numMotor>
 std::array<int, numMotor> array_in_range(int b1, int b2) {
     std::array<int, numMotor> arr{};
     for (int idx {0}; idx < b2-b1; ++idx ) {
@@ -126,26 +207,25 @@ std::array<int, numMotor> array_in_range(int b1, int b2) {
     return arr;
 }
 
-template <int numMotor>
-Actuator_Handler<numMotor>::Actuator_Handler(std::array<ServoMotorState, numMotor> motors, std::string port) :
+template <std::size_t numMotor>
+Actuator_Handler<numMotor>::Actuator_Handler(std::array<ServoMotor, numMotor> motors, std::string port) :
     Actuator_Handler{ motors, port, BaudRate::r_1M }
 {
 }
 
-template <int numMotor>
-Actuator_Handler<numMotor>::Actuator_Handler(std::array<ServoMotorState, numMotor> motors, std::string port, BaudRate rate) :
+template <std::size_t numMotor>
+Actuator_Handler<numMotor>::Actuator_Handler(std::array<ServoMotor, numMotor> motors, std::string port, BaudRate rate) :
     m_ST{ port, rate },
     m_motors { motors }
-    // m_index_list { array_in_range<int, numMotor>(numMotor) }
 {
 }
 
-template <int numMotor>
+template <std::size_t numMotor>
 bool Actuator_Handler<numMotor>::selfInsepct() {
     bool allOkay { true };
-    for (ServoMotorState& motor : m_motors ) {
+    for (ServoMotor& motor : m_motors ) {
         ReadResult<bool> result = m_ST.ping(
-            static_cast<u8>( motor.ID )
+            motor.ID
         );
         if ( !result.okay ) {
             allOkay = false;
@@ -154,11 +234,10 @@ bool Actuator_Handler<numMotor>::selfInsepct() {
     return allOkay;
 }
 
-template <int numMotor>
+template <std::size_t numMotor>
 bool Actuator_Handler<numMotor>::enableTorque() {
-    // return enableTorque(m_index_list);
     bool return_status { true };
-    for (const ServoMotorState& motor : m_motors) {
+    for (const ServoMotor& motor : m_motors) {
         ReadResult<bool> result = m_ST.enableTorque( motor.ID );
         if ( !result.okay ) {
             return_status = false;
@@ -168,7 +247,7 @@ bool Actuator_Handler<numMotor>::enableTorque() {
     return return_status;
 }
 
-template <int numMotor>
+template <std::size_t numMotor>
 bool Actuator_Handler<numMotor>::enableTorque(const std::vector<int>& index_list) {
     ReadResult<bool> result {};
     bool return_status { true };
@@ -183,10 +262,10 @@ bool Actuator_Handler<numMotor>::enableTorque(const std::vector<int>& index_list
 }
 
 
-template <int numMotor>
+template <std::size_t numMotor>
 bool Actuator_Handler<numMotor>::disableTorque() {
     bool return_status { true };
-    for (const ServoMotorState& motor : m_motors) {
+    for (const ServoMotor& motor : m_motors) {
         ReadResult<bool> result = m_ST.disableTorque( motor.ID );
         if ( result.status != ReadStatus::Okay ) {
             return_status = false;
@@ -195,7 +274,7 @@ bool Actuator_Handler<numMotor>::disableTorque() {
     return return_status;
 }
 
-template <int numMotor>
+template <std::size_t numMotor>
 bool Actuator_Handler<numMotor>::disableTorque(const std::vector<int>& index_list) {
     ReadResult<bool> result {};
     bool return_status { true };
@@ -210,7 +289,7 @@ bool Actuator_Handler<numMotor>::disableTorque(const std::vector<int>& index_lis
 }
 
 
-template <int numMotor>
+template <std::size_t numMotor>
 bool Actuator_Handler<numMotor>::setPosition(int position) {
     // Broadcast write
     ReadResult<bool> result = m_ST.writePosition(
@@ -220,8 +299,8 @@ bool Actuator_Handler<numMotor>::setPosition(int position) {
     return true;
 }
 
-template <int numMotor>
-bool Actuator_Handler<numMotor>::setPosition(const std::vector<int>& index_list, std::vector<int> position_list) {
+template <std::size_t numMotor>
+bool Actuator_Handler<numMotor>::setPosition(const std::vector<int>& index_list, const std::vector<int> position_list) {
     assert( index_list.size() == position_list.size() && "Index list and position list should have the same size");
     ReadResult<bool> result {};
     bool return_status { true };
@@ -246,7 +325,7 @@ bool Actuator_Handler<numMotor>::setPosition(const std::vector<int>& index_list,
     return return_status;
 }
 
-template <int numMotor>
+template <std::size_t numMotor>
 bool Actuator_Handler<numMotor>::setPositionRegister(const std::vector<int>& index_list, std::vector<int> position_list, bool pending) {
     assert( index_list.size() == position_list.size() && "Index list and position list should have the same size");
     bool return_status { true };
@@ -268,16 +347,14 @@ bool Actuator_Handler<numMotor>::setPositionRegister(const std::vector<int>& ind
         }
     }
     if ( !pending ) {
-        ReadResult<bool> result = m_ST.regWriteAction();
-        if ( !result.okay ) {
-            std::cerr << "Fail to trigger action.\n";
+        if ( !actionTrigger() ) {
             return false;
         }
     }
     return return_status;
 }
 
-template <int numMotor>
+template <std::size_t numMotor>
 bool Actuator_Handler<numMotor>::actionTrigger() {
     ReadResult<bool> result = m_ST.regWriteAction();
     if ( !result.status ) {
@@ -287,7 +364,7 @@ bool Actuator_Handler<numMotor>::actionTrigger() {
     return true;
 }
 
-template <int numMotor>
+template <std::size_t numMotor>
 bool Actuator_Handler<numMotor>::setSpeed(int speed) {
     // Broadcast write
     ReadResult<bool> result = m_ST.writeSpeed(
@@ -297,7 +374,7 @@ bool Actuator_Handler<numMotor>::setSpeed(int speed) {
     return true;
 }
 
-template <int numMotor>
+template <std::size_t numMotor>
 bool Actuator_Handler<numMotor>::setSpeed(const std::vector<int>& index_list, std::vector<int> speed_list) {
     assert( index_list.size() == speed_list.size() && "Index list and speed list should have the same size");
     ReadResult<bool> result {};
@@ -323,10 +400,10 @@ bool Actuator_Handler<numMotor>::setSpeed(const std::vector<int>& index_list, st
 }
 
 
-template <int numMotor>
+template <std::size_t numMotor>
 bool Actuator_Handler<numMotor>::updateAllFeedback() {
     bool updateAll { true };
-    for ( ServoMotorState& motor : m_motors ) {
+    for ( ServoMotor& motor : m_motors ) {
         ServoFeedback feedback { m_ST.readFeedback( motor.ID ) };
         if ( feedback.status != ReadStatus::Okay ) {
             motor.feedback.status == feedback.status;
@@ -338,9 +415,9 @@ bool Actuator_Handler<numMotor>::updateAllFeedback() {
     return updateAll;
 }
 
-template <int numMotor>
+template <std::size_t numMotor>
 bool Actuator_Handler<numMotor>::updateFeedback(int index) {
-    ServoMotorState& motor { m_motors[index] };
+    ServoMotor& motor { m_motors[index] };
     ServoFeedback feedback { m_ST.readFeedback( motor.ID ) };
     if ( feedback.status != ReadStatus::Okay ) {
         motor.feedback.status = feedback.status;
@@ -350,7 +427,7 @@ bool Actuator_Handler<numMotor>::updateFeedback(int index) {
     return true;
 }
 
-template <int numMotor>
+template <std::size_t numMotor>
 template <typename T>
 std::array<T, numMotor> Actuator_Handler<numMotor>::getAllInfo(T ServoFeedback::*member) {
     std::array<T, numMotor> info_list {};
@@ -360,7 +437,7 @@ std::array<T, numMotor> Actuator_Handler<numMotor>::getAllInfo(T ServoFeedback::
     return info_list;
 }
 
-template <int numMotor>
+template <std::size_t numMotor>
 template <typename T>
 std::vector<T> Actuator_Handler<numMotor>::getInfo(const std::vector<int>& indices, T ServoFeedback::*member) {
     std::vector<T> info_list {};
@@ -372,55 +449,56 @@ std::vector<T> Actuator_Handler<numMotor>::getInfo(const std::vector<int>& indic
     return info_list;
 }
 
-// TODO: what type to return here
-template <int numMotor>
+template <std::size_t numMotor>
 std::array<int, numMotor> Actuator_Handler<numMotor>::getAllPosition() {
     return getAllInfo<int>(&ServoFeedback::position);
 }
 
-template <int numMotor>
+template <std::size_t numMotor>
 std::vector<int> Actuator_Handler<numMotor>::getPosition(const std::vector<int>& indices) {
     return getInfo<int>(indices, &ServoFeedback::position);
 }
 
-template <int numMotor>
+template <std::size_t numMotor>
 std::array<int, numMotor> Actuator_Handler<numMotor>::getAllSpeed() {
     return getAllInfo<int>(&ServoFeedback::speed);
 }
 
-template <int numMotor>
+template <std::size_t numMotor>
 std::vector<int> Actuator_Handler<numMotor>::getSpeed(const std::vector<int>& indices) {
     return getInfo<int>(indices, &ServoFeedback::speed);
 }
 
-template <int numMotor>
+template <std::size_t numMotor>
 std::array<double, numMotor> Actuator_Handler<numMotor>::getAllLoad() {
     return getAllInfo<double>(&ServoFeedback::load);
 }
 
-template <int numMotor>
+template <std::size_t numMotor>
 std::vector<double> Actuator_Handler<numMotor>::getLoad(const std::vector<int>& indices) {
     return getInfo<double>(indices, &ServoFeedback::load);
 }
 
-template <int numMotor>
+template <std::size_t numMotor>
 std::array<double, numMotor> Actuator_Handler<numMotor>::getAllVoltage() {
     return getAllInfo<double>(&ServoFeedback::voltage);
 }
 
-template <int numMotor>
+template <std::size_t numMotor>
 std::vector<double> Actuator_Handler<numMotor>::getVoltage(const std::vector<int>& indices) {
     return getInfo<double>(indices, &ServoFeedback::voltage);
 }
 
-template <int numMotor>
+template <std::size_t numMotor>
 std::array<int, numMotor> Actuator_Handler<numMotor>::getAllTemperature() {
     return getAllInfo<int>(&ServoFeedback::temperature);
 }
 
-template <int numMotor>
+template <std::size_t numMotor>
 std::vector<int> Actuator_Handler<numMotor>::getTemperature(const std::vector<int>& indices) {
     return getInfo<int>(indices, &ServoFeedback::temperature);
 }
+
+} // namespace Actuator
 
 #endif

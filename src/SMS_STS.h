@@ -76,6 +76,9 @@ constexpr u8 SMS_STS_PRESENT_CURRENT_H { 70 };
 
 
 
+/**
+ * Operation mode of the servo motor: Position_servo, Speed, PWM, Step_servo.
+ */
 enum class OperationMode {
 	Position_servo,
 	Speed,
@@ -90,6 +93,19 @@ struct MonitorParams {
 	int temperature {};
 };
 
+/**
+ * Servo motor feedback: status, timestamp, position, spee,d load, voltage, ..., asyncFlag, error, isMoving.
+ * status: (ReadStatus)
+ * timestamp: (std::chrono::steady_clock::time_point)
+ * position: (int)
+ * speed: (int)
+ * load: (double)
+ * voltage: (double)
+ * temperature: (int)
+ * asyncFlag: (bool)
+ * error: (u8)
+ * isMoving: (bool)
+ */
 struct ServoFeedback {
 	ReadStatus status {};
 	std::chrono::steady_clock::time_point timestamp {};
