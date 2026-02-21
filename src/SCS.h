@@ -63,6 +63,7 @@ public:
 	SCS();
 	SCS(bool isBigEndian);
 	SCS(bool isBigEndian, u8 level);
+	virtual ~SCS() = default;
 
 public:
 	ReadResult<bool> genWrite(int ID, u8 memAddr, u8 *nDat, u8 nLen); // general write

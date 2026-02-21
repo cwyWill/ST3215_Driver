@@ -128,6 +128,7 @@ class SMS_STS : public SCSerial
 public:
 	SMS_STS(std::string port);
 	SMS_STS(std::string port, BaudRate rate);
+	virtual ~SMS_STS() = default;
 
 // write command
 public:

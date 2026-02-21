@@ -30,6 +30,7 @@ public:
 	SCSerial(std::string port, BaudRate rate);
 	SCSerial(std::string port, BaudRate rate, bool isBigEndian);
 	SCSerial(std::string port, BaudRate rate, bool isBigEndian, u8 level);
+	virtual ~SCSerial() = default;
 
 protected:
 	// write to serial
