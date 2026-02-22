@@ -1,13 +1,9 @@
-// #include "SMS_STS.h"
-// #include <boost/asio.hpp>
 #include "Actuator_Handler.h"
 #include <string>
 #include <iostream>
 #include <thread>
 #include <chrono>
 #include <iomanip>
-
-// template class Actuator_Handler<2>;
 
 int main() {
 

@@ -5,7 +5,7 @@ add_executable(test_driver
 )
 
 target_link_libraries(test_driver
-    PRIVATE ST3215_Driver
+    PRIVATE ST3215
 )
 
 # add_executable(test_angle_limit
