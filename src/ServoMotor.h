@@ -59,10 +59,10 @@ struct ServoCalibration {
     }
     int32_t angleToStep(double angle) const noexcept {
         const int32_t delta { static_cast<int32_t>( std::round( angle * invResolution) ) };
-        return posDirection ? correction - delta : correction + delta;
+        return posDirection ? correction + delta : correction - delta;
     }
     double stepToAngle(int32_t step) const noexcept {
-        const int32_t delta = posDirection ? correction - step : step - correction;
+        const int32_t delta = posDirection ? step - correction : correction - step ;
         return static_cast<double>(delta) * resolution;
     }
 };
