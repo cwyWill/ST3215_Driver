@@ -5,8 +5,13 @@ add_executable(test_driver
 )
 
 target_link_libraries(test_driver
-    PRIVATE ST3215
+    PRIVATE st3215_driver
 )
 
-find_package(Boost REQUIRED COMPONENTS system)
+add_executable(test_driver_yaml
+    test_driver_yaml.cpp
+)
 
+target_link_libraries(test_driver_yaml
+    PRIVATE st3215_driver
+)

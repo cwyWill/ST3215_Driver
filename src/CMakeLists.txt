@@ -9,21 +9,23 @@ set(CMAKE_CXX_STANDARD_REQUIRED on)
 find_package(Boost REQUIRED COMPONENTS system)
 # target_link_libraries(ST3215_Driver Boost::system)
 
-add_library(ST3215
+add_library(st3215_driver
     SCS.cpp
     SCSerial.cpp
     SMS_STS.cpp
     Actuator_Handler.h
 )
 
-target_compile_options(ST3215 PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_options(st3215_driver PRIVATE -Wall -Wextra -Wpedantic)
 
-target_link_libraries(ST3215
+target_link_libraries(st3215_driver
     PUBLIC Boost::system
 )
 
-target_include_directories(ST3215
+target_include_directories(st3215_driver
     PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-        $<INSTALL_INTERFACE:include>
+        ${CMAKE_CURRENT_SOURCE_DIR}
+    # PUBLIC
+    #     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    #     $<INSTALL_INTERFACE:include>
 )

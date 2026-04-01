@@ -10,20 +10,20 @@
 namespace Actuator {
 
 /**
- * Angle limit in step unit, typically 0-4095, corresponding to 0-360 degree.
+ * Angle limit
  * 
- * minStep: (int32_t) the minimum step of the servo
- * maxStep: (int32_t) the maximum step of the servo
+ * @param minAngle: (double) the minimum angle of the servo
+ * @param maxAngle: (double) the maximum angle of the servo
  */
-struct AngleLimitSteps {
-    uint16_t minStep { 0 };
-    uint16_t maxStep { 4095 };
-    constexpr AngleLimitSteps(uint16_t a = 0, uint16_t b = 4095) :
-        minStep{ a < b ? a : b},
-        maxStep{ a < b ? b : a}
+struct AngleLimit {
+    double minAngle { 0.0 };
+    double maxAngle { 0.0 };
+    constexpr AngleLimit(double a = 0.0, double b = 0.0) :
+        minAngle{ std::min(a, b) },
+        maxAngle{ std::max(a, b) }
     {}
-    constexpr bool contains (uint16_t step) const noexcept {
-        return step >= minStep && step <= maxStep;
+    constexpr bool contains (double angle) const noexcept {
+        return angle >= minAngle && angle <= maxAngle;
     }
 };
 
@@ -47,15 +47,17 @@ struct ServoCommand {
  * @param posDirection: (bool) position direction.
 */
 struct ServoCalibration {
+    // member variables
     int32_t correction { 2047 };
-    AngleLimitSteps targetAngleLimit {0, 4095};
+    AngleLimit targetAngleLimit {0, 0};
     bool posDirection { false };
 
+    // static variables
     static constexpr double resolution { 2 * M_PI / 4096.0 };
     static constexpr double invResolution { 2048.0 / M_PI };
 
-    constexpr bool inAngleLimit(int32_t position) const noexcept {
-        return targetAngleLimit.contains( position  );
+    constexpr bool inAngleLimit(double position) const noexcept {
+        return targetAngleLimit.contains( position );
     }
     int32_t angleToStep(double angle) const noexcept {
         const int32_t delta { static_cast<int32_t>( std::round( angle * invResolution) ) };
@@ -67,12 +69,16 @@ struct ServoCalibration {
     }
 };
 
+/**
+ * @brief Servo motor class. Initialize with serial number, ID, and calibration parameters. Assign driver after initialization.
+ */
 class ServoMotor {
 public:
-    ServoMotor(const uint8_t ID, const ServoCalibration& calibration, SMS_STS& st) :
-        m_ID{ ID },
-        m_calibration{ calibration },
-        m_driver{ st }
+    ServoMotor(const uint8_t serialNum, const uint8_t ID, const ServoCalibration& calibration, SMS_STS& st) :
+        m_serialNum { serialNum },
+        m_ID { ID },
+        m_calibration { calibration },
+        m_driver { st }
     {}
 
     /**
@@ -120,9 +126,11 @@ public:
      * Set the target angle (rad) of the servo motor.
      */
     bool setAngle(double angle) {
-        int32_t step { m_calibration.angleToStep(angle) };
-        if ( !m_calibration.inAngleLimit(step) )
+        if ( !m_calibration.inAngleLimit(angle) ) {
+            std::cerr << "Angle " << angle << " is out of limit for motor # " << m_serialNum << '\n';
             return false;
+        }
+        int32_t step { m_calibration.angleToStep(angle) };
         ReadResult<bool> result = m_driver.writePosition(m_ID, static_cast<s16>(step));
         return !!result.okay;
     }
@@ -162,6 +170,7 @@ public:
 public:
     int ID() const { return static_cast<int>(m_ID); }
 private:
+    uint8_t m_serialNum;
     uint8_t m_ID;
     ServoCalibration m_calibration;
     SMS_STS& m_driver;

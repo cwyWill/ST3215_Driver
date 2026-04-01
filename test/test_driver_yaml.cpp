@@ -4,6 +4,7 @@
 #include <thread>
 #include <chrono>
 #include <iomanip>
+#include "joint_loader.h"
 
 int main() {
 
@@ -11,18 +12,7 @@ int main() {
 
     using namespace Actuator;
     Actuator_Handler<1> act {
-        std::array<ServoMotor, 1> {
-            ServoMotor {
-                1,  // serial number
-                11, // ID
-                ServoCalibration {
-                    2014,   // correction
-                    { -M_PI_2, M_PI_2 }, // target angle limit
-                    false   // posDirection
-                },
-                st
-            }
-        },
+        loadMotorsFromYAML<1>("joint_config.yaml", st),
         st
     };
 

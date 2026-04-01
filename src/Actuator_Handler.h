@@ -133,8 +133,8 @@ std::array<int, numMotor> array_in_range(int b1, int b2) {
 
 template <std::size_t numMotor>
 Actuator_Handler<numMotor>::Actuator_Handler(std::array<ServoMotor, numMotor> motors, SMS_STS& st) :
-    m_motors{ motors },
-    m_ST{ st }
+    m_motors { motors },
+    m_ST { st }
 {
 }
 
