@@ -14,6 +14,7 @@ add_library(st3215_driver
     SCSerial.cpp
     SMS_STS.cpp
     Actuator_Handler.h
+    joint_yaml_loader.h
 )
 
 target_compile_options(st3215_driver PRIVATE -Wall -Wextra -Wpedantic)

@@ -15,7 +15,7 @@
 //     positive_direction: false
 
 template <int N>
-std::array<Actuator::ServoMotor, N> loadMotorsFromYAML(const std::string& filename, SMS_STS& st) {
+std::array<Actuator::ServoMotor, N> loadMotorsFromYAML(const std::string& filename) {
     std::array<Actuator::ServoMotor, N> motors {};
     try {
         YAML::Node root = YAML::LoadFile(filename);
@@ -28,19 +28,21 @@ std::array<Actuator::ServoMotor, N> loadMotorsFromYAML(const std::string& filena
         for (int i = 0; i < N; ++i) {
             const auto& item = root["Robot"][i];
             YAML::Node joint = item["Joint"];
-            uint8_t serialNum { static_cast<uint8_t>(joint["Number"].as<int>()) };
+            int serialNum { joint["Number"].as<int>() };
             uint8_t ID { static_cast<uint8_t>(joint["ID"].as<int>()) };
             // in ServoCalibration class
-            int32_t correction { static_cast<int32_t>(joint["ZeroStep"].as<int>()) };
+            int32_t zeroStep { static_cast<int32_t>(joint["ZeroStep"].as<int>()) };
             double minAngle { joint["MinAngle"].as<double>() };
             double maxAngle { joint["MaxAngle"].as<double>() };
             bool posDirection { joint["positive_direction"].as<bool>() };
-            ServoCalibration calibration {
-                .correction = correction,
-                .targetAngleLimit = { minAngle, maxAngle },
+            motors[i] = Actuator::ServoMotor {
+                .serialNum = serialNum,
+                .ID = ID,
+                .zeroStep = zeroStep,
+                .minAngle = minAngle,
+                .maxAngle = maxAngle,
                 .posDirection = posDirection
             };
-            motors[i] = Actuator::ServoMotor(serialNum, ID, calibration, st);
         }
     } catch(YAML::ParserException& e) {
         std::cout << e.what() << "\n";

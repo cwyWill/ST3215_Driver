@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.15...3.28)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 add_executable(test_driver
     test_driver.cpp
 )
@@ -8,10 +10,13 @@ target_link_libraries(test_driver
     PRIVATE st3215_driver
 )
 
+find_package(yaml-cpp REQUIRED)
+
 add_executable(test_driver_yaml
     test_driver_yaml.cpp
 )
 
 target_link_libraries(test_driver_yaml
     PRIVATE st3215_driver
+    PUBLIC yaml-cpp
 )

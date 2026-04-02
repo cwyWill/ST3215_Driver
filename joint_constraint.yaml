@@ -14,13 +14,41 @@ Robot:
       Number: 1
       ID: 11
       ZeroStep: 2014
-      MinAngle: -90
-      MaxAngle: 90
+      MinAngle: -1.58    # 90 degree
+      MaxAngle: 1.58    # -90 degree
       positive_direction: false
   - Joint:
       Number: 2
       ID: 12
       ZeroStep: 2028
-      MinAngle: 0
-      MaxAngle: 110
+      MaxAngle: 0
+      MinAngle: -2.6    # -150 degree
       positive_direction: true
+  - Joint:
+      Number: 3
+      ID: 13
+      ZeroStep: 3103
+      MinAngle: -2.095    # -120 degree
+      MaxAngle: 0.2618    # 15 degree
+      positive_direction: true
+  - Joint:
+      Number: 4
+      ID: 14
+      ZeroStep: 2062
+      MaxAngle: 1.58    # 90 degree
+      MinAngle: -1.58    # -90 degree
+      positive_direction: false
+  - Joint:
+      Number: 5
+      ID: 15
+      ZeroStep: 2074
+      MinAngle: -0.524    # -30 degree
+      MaxAngle: 2.094    # 120 degree
+      positive_direction: true
+  - Joint:
+      Number: 6
+      ID: 16
+      ZeroStep: 2047
+      MinAngle: -3.14   # -180 degree
+      MaxAngle: 3.14    # 180 degree
+      positive_direction: false

@@ -13,14 +13,12 @@ int main() {
     Actuator_Handler<1> act {
         std::array<ServoMotor, 1> {
             ServoMotor {
-                1,  // serial number
-                11, // ID
-                ServoCalibration {
-                    2014,   // correction
-                    { -M_PI_2, M_PI_2 }, // target angle limit
-                    false   // posDirection
-                },
-                st
+                .serialNum = 1,
+                .ID = 11,
+                .zeroStep = 2014,
+                .minAngle = -M_PI_2,
+                .maxAngle = M_PI_2,
+                .posDirection = false
             }
         },
         st
